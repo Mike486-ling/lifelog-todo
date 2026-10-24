@@ -49,7 +49,13 @@ main{padding:4px 16px 24px}
 .row{display:flex;align-items:flex-start;gap:12px;background:var(--card);border:1px solid var(--line);
   border-radius:14px;padding:13px 12px 13px 16px;margin-bottom:9px;position:relative;overflow:hidden;
   transition:transform .12s,opacity .2s,box-shadow .15s}
-.row .prio{position:absolute;left:0;top:0;bottom:0;width:3px;background:#ff4d4f;border-radius:3px 0 0 3px}
+.pdot{display:inline-block;width:9px;height:9px;border-radius:99px;margin-right:8px;
+  vertical-align:middle;position:relative;top:-1px;box-shadow:0 0 6px -1px currentColor}
+.colors{display:flex;gap:8px}
+.colors button{flex:1;padding:10px 4px;border-radius:10px;border:1px solid var(--line);background:#0f131a;
+  color:var(--dim);font-size:13.5px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
+.colors button i{width:10px;height:10px;border-radius:99px;display:inline-block}
+.colors button.on{background:#212835;color:var(--txt);border-color:#42506a}
 .row.dragging{opacity:.92;transform:scale(1.015);box-shadow:0 10px 28px -10px #000,0 0 0 1px #4a8cff;
   touch-action:none;z-index:5}
 .row.shift{transition:transform .15s}
@@ -168,6 +174,13 @@ dialog::backdrop{background:#000a}
     <button data-cat="sport">运动</button>
     <button data-cat="long">长期</button>
   </div>
+  <label class="f">优先级颜色（默认按排序自动）</label>
+  <div class="colors" id="fColor">
+    <button data-color=""><i style="background:#6b7688"></i>自动</button>
+    <button data-color="red"><i style="background:#ff4d4f"></i>红</button>
+    <button data-color="amber"><i style="background:#f5a524"></i>黄</button>
+    <button data-color="green"><i style="background:#34d399"></i>绿</button>
+  </div>
   <label class="f" id="dueLabel">日期（可空）</label>
   <div class="dtrow">
     <input type="date" id="fDate">
@@ -208,7 +221,7 @@ var CATS={study:{n:'学习',c:'#4a8cff'},life:{n:'生活',c:'#ff9f43'},sport:{n:
 var KEY='ll_tasks_v1', tab='today', filter='today', editing=null, draftCat='study';
 var tasks=[], storeOk=true;
 var NATIVE=(typeof AndroidHost!=='undefined')?AndroidHost:null;
-var selDate=today(), rangeA=null, rangeB=null;
+var selDate=today(), rangeA=null, rangeB=null, draftColor='';
 
 function pad(n){return n<10?'0'+n:''+n}
 function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
@@ -387,7 +400,18 @@ function renderHeader(){
   document.getElementById('hd').innerHTML=h;
 }
 
-function rowHtml(t,rank){
+var PIN={'red':'#ff4d4f','amber':'#f5a524','green':'#34d399'};
+function prioDot(t,rank,total){
+  var c=t.color||'';
+  var r=1;
+  if(!c){
+    var ratio=(total&&total>1)?(rank/(total-1)):0;
+    c = ratio<0.34?'red' : ratio<0.7?'amber' : 'green';
+    r = Math.max(0.5,1-ratio*0.5);
+  }
+  return '<i class="pdot" style="background:'+PIN[c]+';color:'+PIN[c]+';opacity:'+r.toFixed(2)+'"></i>';
+}
+function rowHtml(t,rank,total){
   var bar='';
   var c=CATS[t.cat]||CATS.study;
   var meta='<span class="dot" style="background:'+c.c+'"></span>'+c.n;
@@ -399,13 +423,10 @@ function rowHtml(t,rank){
   if(t.deferred) meta+='<span>顺延'+t.deferred+'次</span>';
   if(t.remindDate&&t.remindTime) meta+='<span>⏰'+(t.remindDate===today()?'':(t.remindDate.slice(5))+' ')+fmtT(t.remindTime)+'</span>';
   if(t.note) meta+='<span>📝</span>';
-  if(rank!=null){
-    var op=Math.max(0.12,1-rank*0.13);
-    bar='<i class="prio" style="opacity:'+op.toFixed(2)+'"></i>';
-  }
-  return '<div class="row'+(t.done?' done':'')+'" data-id="'+t.id+'">'+bar+
+  if(rank!=null)bar=prioDot(t,rank,total);
+  return '<div class="row'+(t.done?' done':'')+'" data-id="'+t.id+'">'+
     '<button class="chk" data-chk="'+t.id+'">✓</button>'+
-    '<div class="mid"><div class="tt">'+esc(t.title)+'</div><div class="meta">'+meta+'</div></div>'+
+    '<div class="mid"><div class="tt">'+bar+esc(t.title)+'</div><div class="meta">'+meta+'</div></div>'+
     '<button class="more" data-edit="'+t.id+'">⋯</button></div>';
 }
 
@@ -432,7 +453,7 @@ function renderToday(){
   if(open.length){
     var isPast=s<t;
     h+='<div class="sec"><div class="sec-h"><b'+(isPast?' class="od"':'')+'>'+(isPast?'当天未完成':'当天安排')+'</b><span class="cnt">'+open.length+'</span></div>';
-    h+=open.map(function(x,i){return rowHtml(x,i)}).join('');
+    h+=open.map(function(x,i){return rowHtml(x,i,open.length)}).join('');
     h+='</div>';
   }else{
     h+='<div class="sec"><div class="sec-h"><b>'+(s<t?'当天记录':'当天安排')+'</b><span class="cnt">0</span></div>'+
@@ -460,7 +481,8 @@ function renderCat(){
   } else list=tasks.filter(function(x){return x.cat===cat});
   list=list.slice().sort(function(a,b){if(a.done!==b.done)return a.done?1:-1;return byOrder(a,b)});
   var h='<div class="sec">';
-  h+= list.length? list.map(function(x,i){return rowHtml(x,x.done?null:i)}).join('')
+  var openCnt=list.filter(function(x){return !x.done}).length;
+  h+= list.length? list.map(function(x,i){return rowHtml(x,x.done?null:i,openCnt)}).join('')
     : '<div class="empty">这个分类还没有任务<br>点 ＋ 添加</div>';
   h+='</div>';
   return h;
@@ -516,7 +538,8 @@ function openSheet(t){
   document.getElementById('fRDate').value=t?(t.remindDate||''):'';
   document.getElementById('fRTime').value=t?(t.remindTime||''):'';
   draftCat=t?t.cat:(tab==='long'?'long':(tab==='today'?'life':tab));
-  syncCats();syncPh();
+  draftColor=t?(t.color||''):'';
+  syncCats();syncPh();syncColors();
   document.getElementById('bDel').style.display=t?'block':'none';
   document.getElementById('orderBtns').style.display=(t&&!t.done)?'flex':'none';
   document.getElementById('bIcal').style.display='block';
@@ -527,6 +550,11 @@ function openSheet(t){
 function closeSheet(){
   document.getElementById('mask').classList.remove('on');
   document.getElementById('sheet').classList.remove('on');
+}
+function syncColors(){
+  [].forEach.call(document.querySelectorAll('#fColor button'),function(b){
+    b.classList.toggle('on',(b.dataset.color||'')===(draftColor||''));
+  });
 }
 function syncPh(){
   ['fTime','fRTime'].forEach(function(id){
@@ -756,7 +784,7 @@ function toast(msg){
 
 /* ---------- 事件 ---------- */
 document.addEventListener('click',function(e){
-  var el=e.target.closest('[data-chk],[data-edit],[data-tab],[data-filter],[data-act],[data-cat],[data-date]');
+  var el=e.target.closest('[data-chk],[data-edit],[data-tab],[data-filter],[data-act],[data-cat],[data-date],[data-color]');
   if(!el)return;
   if(el.dataset.chk){toggle(el.dataset.chk);return}
   if(el.dataset.edit){
@@ -774,6 +802,7 @@ document.addEventListener('click',function(e){
   if(el.dataset.date){selectDate(el.dataset.date);return}
   if(el.dataset.filter){filter=el.dataset.filter;render();return}
   if(el.dataset.cat){draftCat=el.dataset.cat;syncCats();return}
+  if(el.dataset.color!==undefined&&el.closest('#fColor')){draftColor=el.dataset.color;syncColors();return}
   if(el.dataset.act){
     if(el.dataset.act==='notify')askNotify();
     else if(el.dataset.act==='ical'){
@@ -822,7 +851,7 @@ document.getElementById('bSave').addEventListener('click',function(){
   if(rDate&&!rTime)rTime='09:00';
   if(dueDate&&!dueTime)dueTime='';
   var obj= editing?editing : {id:uid(),createdAt:Date.now(),done:false};
-  obj.title=title;obj.cat=draftCat;obj.note=document.getElementById('fNote').value.trim();
+  obj.title=title;obj.cat=draftCat;obj.color=draftColor||'';obj.note=document.getElementById('fNote').value.trim();
   obj.dueDate=dueDate||'';obj.dueTime=dueTime||'';
   obj.remindDate=rDate||'';obj.remindTime=rTime||'';
   if(!editing){obj.order=Date.now();tasks.push(obj)}
