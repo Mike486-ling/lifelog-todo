@@ -10,7 +10,9 @@
 
 ![截图](docs/screenshots/home.jpg)　![统计](docs/screenshots/stats.jpg)
 
-![长按拖动排序](docs/screenshots/drag.jpg)
+![周历热力图](docs/screenshots/week.jpg)　![搜索](docs/screenshots/search.jpg)
+
+![浅色模式](docs/screenshots/light.jpg)　![长按拖动排序](docs/screenshots/drag.jpg)
 
 ## 功能
 

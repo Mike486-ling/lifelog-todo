@@ -12,7 +12,9 @@ No account, no server, no tracking. Your data stays on your phone.
 
 ![screenshot](docs/screenshots/home.jpg)　![stats](docs/screenshots/stats.jpg)
 
-![drag to reorder](docs/screenshots/drag.jpg)
+![weekly heat map](docs/screenshots/week.jpg)　![search](docs/screenshots/search.jpg)
+
+![light theme](docs/screenshots/light.jpg)　![drag to reorder](docs/screenshots/drag.jpg)
 
 ## Features
 
