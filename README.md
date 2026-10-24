@@ -6,7 +6,7 @@
 
 ![icon](docs/icon.png)
 
-**下载 APK**：[Releases · v1.11](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　|　[English](README.en.md)
+**下载 APK**：[Releases · v1.12](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　|　[English](README.en.md)
 
 ![截图](docs/screenshots/home.jpg)　![统计](docs/screenshots/stats.jpg)
 
@@ -14,12 +14,15 @@
 
 ![浅色模式](docs/screenshots/light.jpg)　![长按拖动排序](docs/screenshots/drag.jpg)
 
+![主页子任务](docs/screenshots/subtasks.jpg)　![首次引导](docs/screenshots/guide.jpg)
+
 ## 功能
 
 | 功能 | 说明 |
 |---|---|
 | **重复任务** | 每天 / 每周几（可多选）/ 每月几号；勾完成自动生成下一次，取消完成会撤掉那次 |
-| **子任务** | 一条任务可拆几条子项，逐条勾，列表里显示进度条（2/3） |
+| **子任务** | 一条任务可拆几条子项，**主页就直接铺在下面逐条勾**，不用进编辑页；进度条 2/3 可点开／收起 |
+| **首次引导** | 第一次打开列清 5 项必要权限（通知／精确闹钟／自启动／省电策略／后台弹出界面），点一条直接跳到对应设置 |
 | **快速添加** | 标题直接写「明天8点 跑步 30分钟」，自动识别日期、时间、分类并填入，标题只留正文 |
 | **搜索** | 顶部「🔍 搜索」跨所有日期搜任务和备注，点结果直接跳到那天，可在结果里勾完成 |
 | **删除可撤销** | 删掉的任务会在底部留 5 秒「撤销」，误删能救回来 |
@@ -64,12 +67,12 @@ cd android
 
 ## 技术实现
 
-- **界面**：单文件 HTML + 原生 JS，无框架、无 CDN、无网络依赖，全部内联（约 46 KB）
+- **界面**：单文件 HTML + 原生 JS，无框架、无 CDN、无网络依赖，全部内联（约 88 KB）
 - **存储**：`localStorage`（App 内为私有目录），支持 JSON 备份
 - **提醒**：
   - 网页版 → 前台 `Notification` + 页面内计时器，或导出 `.ics`
   - App → `AlarmManager.setExactAndAllowWhileIdle` + 全屏 Intent + `MediaPlayer(USAGE_ALARM)` 循环铃声
-- **原生桥**：`addJavascriptInterface` 暴露 `sync()` / `notifyNow()` / `askPermission()`，网页侧检测到 `AndroidHost` 就自动切换
+- **原生桥**：`addJavascriptInterface` 暴露 `sync()` / `notifyNow()` / `askPermission()` / `openAppSettings()` / `setBg()`，网页侧检测到 `AndroidHost` 就自动切换
 
 ## 已知限制
 
