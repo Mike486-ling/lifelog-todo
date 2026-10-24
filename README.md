@@ -6,7 +6,9 @@
 
 ![icon](docs/icon.png)
 
-**下载 APK**：[Releases · v2.2](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　|　[English](README.en.md)
+**下载 APK**：[GitHub Releases · v2.2](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　·　[国内加速直链](https://cdn.jsdelivr.net/gh/Mike486-ling/lifelog-todo@v2.2/docs/download/LifeLog-2.2.apk)　|　[English](README.en.md)
+
+> 直链如果被浏览器打开成文本，长按「链接另存为」或复制到下载工具里。
 
 ![截图](docs/screenshots/home.jpg)　![统计](docs/screenshots/stats.jpg)
 
