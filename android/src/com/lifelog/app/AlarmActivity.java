@@ -31,6 +31,7 @@ public class AlarmActivity extends Activity {
     private String title = "";
     private String body = "";
     private String taskId = "";
+    private String sound = "";
 
     @Override
     protected void onCreate(Bundle b) {
@@ -38,6 +39,8 @@ public class AlarmActivity extends Activity {
         title = getIntent().getStringExtra("title");
         body = getIntent().getStringExtra("body");
         taskId = getIntent().getStringExtra("id");
+        String sd = getIntent().getStringExtra("sound");
+        if (sd != null) sound = sd;
         if (title == null) title = "待办提醒";
         if (body == null) body = "";
 
@@ -161,7 +164,7 @@ public class AlarmActivity extends Activity {
     }
 
     private void startRing() {
-        RingPlayer.start(getApplicationContext());
+        RingPlayer.start(getApplicationContext(), sound);
     }
 
     private void stopRing() {
@@ -185,6 +188,7 @@ public class AlarmActivity extends Activity {
             it.putExtra("id", taskId);
             it.putExtra("title", title);
             it.putExtra("body", body);
+            it.putExtra("sound", sound);
             int flags = PendingIntent.FLAG_UPDATE_CURRENT;
             if (Build.VERSION.SDK_INT >= 23) flags |= PendingIntent.FLAG_IMMUTABLE;
             PendingIntent pi = PendingIntent.getBroadcast(
