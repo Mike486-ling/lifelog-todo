@@ -220,5 +220,37 @@ public class MainActivity extends Activity {
         public boolean saveBackup(String json, String name) {
             return Backup.write(MainActivity.this, json, name);
         }
+
+        /** 跟随网页主题切换 WebView 底色，避免内容不够高时露出深色 */
+        @JavascriptInterface
+        public void setBg(final String color) {
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    try {
+                        int c = Color.parseColor(color);
+                        if (web != null) web.setBackgroundColor(c);
+                        getWindow().getDecorView().setBackgroundColor(c);
+                    } catch (Exception e) {
+                    }
+                }
+            });
+        }
+
+        /** 打开本应用的系统设置页（自启动 / 省电策略 / 后台弹出界面都在附近） */
+        @JavascriptInterface
+        public void openAppSettings() {
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    try {
+                        Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:" + getPackageName()));
+                        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(i);
+                    } catch (Exception e) {
+                        toast("打不开应用详情页，请手动到系统设置里找");
+                    }
+                }
+            });
+        }
     }
 }
