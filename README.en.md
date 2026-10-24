@@ -6,7 +6,7 @@ No account, no server, no tracking. Your data stays on your phone.
 
 ![icon](docs/icon.png)
 
-**Download APK**: [Releases · v1.9](https://github.com/Mike486-ling/lifelog-todo/releases/latest)
+**Download APK**: [Releases · v1.10](https://github.com/Mike486-ling/lifelog-todo/releases/latest)
 
 [中文说明](README.md)
 
@@ -18,6 +18,9 @@ No account, no server, no tracking. Your data stays on your phone.
 
 | Feature | Detail |
 |---|---|
+| **Search** | Search titles and notes across every date; tap a result to jump to that day and tick it off right there. |
+| **Undo delete** | Deleted tasks leave a 5-second "Undo" bar at the bottom. |
+| **Themes** | Dark / Light / Follow system, switched from the Data menu. |
 | **Date strip** | Horizontally scrollable date bar at the top. Today / tomorrow / the day after are labelled; scroll freely into past and future. Days with tasks show a blue dot. |
 | **Quick jump** | Tap "Jump to date" to pick any year-month-day; the strip scrolls there. Shortcuts: 1 year ago, 30 days ago, 7 days ago, today, +7 days, +30 days. |
 | **Three tracks** | Study / Life / Sport, each with its own task list. |
@@ -29,7 +32,7 @@ No account, no server, no tracking. Your data stays on your phone.
 | **Survives reboot** | All alarms are re-registered after a reboot. |
 | **Drag to reorder** | Long-press 0.6 s to lift a row; it follows your finger while neighbours slide out of the way, auto-scrolls near the screen edges, and saves on release. |
 | **Priority dots** | A dot in front of each open task shifts red / amber / green based on how many tasks are left today; you can also pin a colour manually. |
-| **Yearly stats** | Total completed, active days, longest / current streak, category split and a full-year heat map; tap a day to jump to it. |
+| **Yearly stats** | Total completed, active days, longest / current streak, category split and a full-year heat map (by month or GitHub-style by week); tap a day to jump to it. |
 | **Calendar export** | Export reminders as `.ics` from the Data menu for the system calendar — useful for people who only use the web version. |
 | **Auto backup** | A JSON copy is written to `Downloads/今日待办备份/` every week; manual backup in the Data menu. |
 | **Notification progress** | The status bar shows "4/8 done · 4 left" for today; tap to jump back into the app. |
