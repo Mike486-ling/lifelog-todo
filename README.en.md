@@ -6,7 +6,7 @@ No account, no server, no tracking. Your data stays on your phone.
 
 ![icon](docs/icon.png)
 
-**Download APK**: [Releases · v1.8](https://github.com/Mike486-ling/lifelog-todo/releases/latest)
+**Download APK**: [Releases · v1.9](https://github.com/Mike486-ling/lifelog-todo/releases/latest)
 
 [中文说明](README.md)
 
@@ -23,13 +23,16 @@ No account, no server, no tracking. Your data stays on your phone.
 | **Three tracks** | Study / Life / Sport, each with its own task list. |
 | **Long-term ideas** | A dedicated board for "maybe someday" ideas, with a live "37 days 5 hours left" countdown. |
 | **Second-level alarms** | Reminders are accurate to the second and fire a **real system alarm**: wakes the screen, shows over the lock screen, loops the alarm ringtone (plays even in silent mode), vibrates, and keeps ringing until dismissed. |
-| **Snooze** | "Remind me in 10 minutes" right from the alarm screen. |
+| **Snooze** | "Remind me in 5 / 10 / 30 minutes" right from the alarm screen. |
+| **Early reminder** | Each task can ring 1 / 5 / 10 / 30 minutes before its time. |
 | **Overdue never lost** | Unfinished tasks from yesterday roll to the top of today, marked in red with "N days overdue". |
 | **Survives reboot** | All alarms are re-registered after a reboot. |
 | **Drag to reorder** | Long-press 0.6 s to lift a row; it follows your finger while neighbours slide out of the way, auto-scrolls near the screen edges, and saves on release. |
 | **Priority dots** | A dot in front of each open task shifts red / amber / green based on how many tasks are left today; you can also pin a colour manually. |
 | **Yearly stats** | Total completed, active days, longest / current streak, category split and a full-year heat map; tap a day to jump to it. |
 | **Calendar export** | Export reminders as `.ics` from the Data menu for the system calendar — useful for people who only use the web version. |
+| **Auto backup** | A JSON copy is written to `Downloads/今日待办备份/` every week; manual backup in the Data menu. |
+| **Notification progress** | The status bar shows "4/8 done · 4 left" for today; tap to jump back into the app. |
 | **Backup** | One-tap JSON export / import. |
 
 ## Two ways to use it

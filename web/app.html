@@ -126,6 +126,9 @@ textarea{resize:vertical;min-height:64px;line-height:1.55}
 .quick button{flex:0 0 auto;background:#0f131a;border:1px solid var(--line);color:var(--dim);
   border-radius:8px;padding:7px 11px;font-size:12.5px;font-family:inherit}
 .quick button:active{background:#212835;color:var(--txt)}
+.quick button.on{background:#2b3444;color:var(--txt);border-color:#42506a}
+.quick.early{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;overflow:visible}
+.quick.early>button{font-size:12px;padding:9px 2px;text-align:center}
 .cats{display:flex;gap:8px}
 .cats button{flex:1;padding:11px 4px;border-radius:11px;border:1px solid var(--line);background:#0f131a;
   color:var(--dim);font-size:14px;font-family:inherit;transition:all .15s}
@@ -255,6 +258,14 @@ dialog::backdrop{background:#000a}
     <button data-q="20:00">20:00</button>
     <button data-q="now2">现在+2秒</button>
   </div>
+  <label class="f">提前提醒（可选）</label>
+  <div class="quick early" id="fEarly">
+    <button data-early="0" class="on">到点</button>
+    <button data-early="1">1 分</button>
+    <button data-early="5">5 分</button>
+    <button data-early="10">10 分</button>
+    <button data-early="30">30 分</button>
+  </div>
   <label class="f">备注</label>
   <textarea id="fNote" placeholder="补充说明，可空"></textarea>
   <div class="btns" id="orderBtns" style="margin-top:14px">
@@ -280,7 +291,7 @@ var CATS={study:{n:'学习',c:'#4a8cff'},life:{n:'生活',c:'#ff9f43'},sport:{n:
 var KEY='ll_tasks_v1', tab='today', filter='today', editing=null, draftCat='study';
 var tasks=[], storeOk=true;
 var NATIVE=(typeof AndroidHost!=='undefined')?AndroidHost:null;
-var selDate=today(), rangeA=null, rangeB=null, draftColor='';
+var selDate=today(), rangeA=null, rangeB=null, draftColor='', draftEarly=0;
 
 function pad(n){return n<10?'0'+n:''+n}
 function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
@@ -299,9 +310,12 @@ function syncNative(){
     if(t.done||!t.remindDate||!t.remindTime)return;
     var at=tsOf(t.remindDate,t.remindTime);
     if(!at)return;
+    at-= (t.early||0)*60000;                       /* 提前提醒 */
+    if(at<Date.now())at=Date.now()+1000;
     list.push({id:t.id,
       title:(CATS[t.cat]||CATS.study).n+' · '+t.title,
-      body:t.note||(dayLabel(t.remindDate)+' '+fmtT(t.remindTime)),
+      body:(t.early?'提前 '+(t.early)+' 分钟 · ':'')+
+        (t.note||(dayLabel(t.remindDate)+' '+fmtT(t.remindTime))),
       at:at});
   });
   try{NATIVE.sync(JSON.stringify(list))}catch(e){}
@@ -328,7 +342,7 @@ function dayTick(){
   if(t!==lastDay){lastDay=t;rollover(true);render()}
 }
 function load(){try{var r=localStorage.getItem(KEY);tasks=r?JSON.parse(r)||[]:[]}catch(e){tasks=[];storeOk=false}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(tasks))}catch(e){storeOk=false}syncNative()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(tasks))}catch(e){storeOk=false}syncNative();maybeBackup()}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 
 function dayLabel(ds){
@@ -482,7 +496,8 @@ function rowHtml(t,rank,total){
     else meta+='<span>'+lbl+'</span>';
   }
   if(t.deferred) meta+='<span>顺延'+t.deferred+'次</span>';
-  if(t.remindDate&&t.remindTime) meta+='<span>⏰'+(t.remindDate===today()?'':(t.remindDate.slice(5))+' ')+fmtT(t.remindTime)+'</span>';
+  if(t.remindDate&&t.remindTime) meta+='<span>⏰'+(t.remindDate===today()?'':(t.remindDate.slice(5))+' ')+fmtT(t.remindTime)+
+    (t.early?' <span style="color:#7fb0ff">提前'+t.early+'分</span>':'')+'</span>';
   if(t.note) meta+='<span>📝</span>';
   if(rank!=null)bar=prioDot(t,rank,total);
   return '<div class="row'+(t.done?' done':'')+'" data-id="'+t.id+'">'+
@@ -587,6 +602,55 @@ function render(){
   if(!storeOk){
     v.insertAdjacentHTML('afterbegin','<div class="empty" style="color:#ff9f43;padding:12px 4px">⚠️ 浏览器不允许本地存储，刷新会丢数据。请用「本地端口」方式打开。</div>');
   }
+  updateProgress();
+}
+
+/* ---------- 通知栏常驻进度 ---------- */
+function progressText(){
+  var t=today();
+  var list=tasks.filter(function(x){return x.cat!=='long'&&x.dueDate===t});
+  var done=list.filter(function(x){return x.done}).length;
+  var open=list.length-done;
+  var later=tasks.filter(function(x){return x.cat!=='long'&&!x.done&&x.dueDate&&x.dueDate>t}).length;
+  if(!list.length)return '今天没有安排 · 之后 '+later+' 项';
+  if(!open)return done+'/'+list.length+' 完成 · 今天的都做完了';
+  return done+'/'+list.length+' 完成 · 还剩 '+open+' 项'+(later?'，之后 '+later+' 项':'');
+}
+var lastProgress='';
+function updateProgress(){
+  if(!NATIVE||!NATIVE.progress)return;
+  var s=progressText();
+  if(s===lastProgress)return;
+  lastProgress=s;
+  try{NATIVE.progress(s)}catch(e){}
+}
+
+/* ---------- 自动备份（每周一次） ---------- */
+function backupName(){return '任务备份-'+today()+'.json'}
+function doBackup(manual){
+  if(!NATIVE||!NATIVE.saveBackup){if(manual)toast('网页版请用「导出备份」');return false}
+  var ok=false;
+  try{ok=NATIVE.saveBackup(JSON.stringify(tasks),backupName())}catch(e){ok=false}
+  if(ok){
+    try{localStorage.setItem('ll_last_backup',String(Date.now()))}catch(e){}
+    if(manual)toast('已备份到 下载/今日待办备份/');
+    else toast('已自动备份到「下载/今日待办备份」');
+  }else if(manual)toast('备份失败，稍后再试');
+  return ok;
+}
+function maybeBackup(){
+  if(!NATIVE||!NATIVE.saveBackup||!tasks.length)return;
+  var last=0;
+  try{last=+(localStorage.getItem('ll_last_backup')||0)}catch(e){}
+  if(Date.now()-last<7*86400000)return;
+  doBackup(false);
+}
+function lastBackupText(){
+  var last=0;
+  try{last=+(localStorage.getItem('ll_last_backup')||0)}catch(e){}
+  if(!last)return '还没自动备份过';
+  var d=new Date(last);
+  return '上次备份 '+(d.getMonth()+1)+'月'+d.getDate()+'日 '+pad(d.getHours())+':'+pad(d.getMinutes());
 }
 
 /* ---------- 弹窗 ---------- */
@@ -601,7 +665,8 @@ function openSheet(t){
   document.getElementById('fRTime').value=t?(t.remindTime||''):'';
   draftCat=t?t.cat:(tab==='long'?'long':(tab==='today'?'life':tab));
   draftColor=t?(t.color||''):'';
-  syncCats();syncPh();syncColors();
+  draftEarly=t?(t.early||0):0;
+  syncCats();syncPh();syncColors();syncEarly();
   document.getElementById('bDel').style.display=t?'block':'none';
   document.getElementById('orderBtns').style.display=(t&&!t.done)?'flex':'none';
   document.getElementById('mask').classList.add('on');
@@ -621,6 +686,11 @@ function syncPh(){
   ['fTime','fRTime'].forEach(function(id){
     var el=document.getElementById(id), w=el.parentNode;
     w.classList.toggle('filled', !!el.value);
+  });
+}
+function syncEarly(){
+  [].forEach.call(document.querySelectorAll('#fEarly button'),function(b){
+    b.classList.toggle('on',(+b.dataset.early||0)===(+draftEarly||0));
   });
 }
 function syncCats(){
@@ -673,7 +743,7 @@ function checkReminders(){
   var now=Date.now(), changed=false;
   tasks.forEach(function(t){
     if(t.done||t.notified||!t.remindDate||!t.remindTime)return;
-    var ms=tsOf(t.remindDate,t.remindTime);
+    var ms=tsOf(t.remindDate,t.remindTime)-(t.early||0)*60000;
     if(ms<=now&&now-ms<43200000){
       t.notified=true;changed=true;fireNotify(t);
     }
@@ -863,9 +933,12 @@ function openData(){
   var d=document.createElement('dialog');
   d.id='dlg';
   var n=tasks.filter(function(x){return !x.done}).length;
+  var hasB=!!(NATIVE&&NATIVE.saveBackup);
   d.innerHTML='<h3 style="margin:0 0 6px">数据</h3>'+
-    '<div class="hint" style="margin-top:0">共 '+tasks.length+' 条任务，'+n+' 条未完成。数据只在本机浏览器里。</div>'+
+    '<div class="hint" style="margin-top:0">共 '+tasks.length+' 条任务，'+n+' 条未完成。数据只在本机浏览器里。<br>'+
+    (hasB?'自动备份：'+lastBackupText()+'（每周一次，存到「下载/今日待办备份」）':'自动备份：仅 App 内可用')+'</div>'+
     '<div class="btns" style="flex-direction:column">'+
+    (hasB?'<button class="b-ghost" id="dBackup">立即备份到手机</button>':'')+
     '<button class="b-ghost" id="dExp">导出备份（JSON）</button>'+
     '<button class="b-ghost" id="dImp">导入备份</button>'+
     '<button class="b-ghost" id="dCal">📅 加入日历（未完成的任务）</button>'+
@@ -875,6 +948,9 @@ function openData(){
   document.body.appendChild(d);
   try{d.showModal()}catch(e){d.setAttribute("open","")}
   d.querySelector('#dClose').onclick=function(){d.close();d.remove()};
+  var bk=d.querySelector('#dBackup');
+  if(bk)bk.onclick=function(){doBackup(true);d.querySelector('.hint').innerHTML=
+    '共 '+tasks.length+' 条任务。自动备份：'+lastBackupText()+'（每周一次，存到「下载/今日待办备份」）'};
   d.querySelector('#dExp').onclick=function(){
     var ok=download('任务备份-'+today()+'.json',JSON.stringify(tasks,null,2),'application/json');
     toast(ok?'备份已导出':'导出失败');
@@ -1044,7 +1120,7 @@ function toast(msg){
 /* ---------- 事件 ---------- */
 document.addEventListener('click',function(e){
   if(Date.now()-justDragged<350)return;      /* 刚拖动过，别把松手当成点击 */
-  var el=e.target.closest('[data-chk],[data-edit],[data-tab],[data-filter],[data-act],[data-cat],[data-date],[data-color]');
+  var el=e.target.closest('[data-chk],[data-edit],[data-tab],[data-filter],[data-act],[data-cat],[data-date],[data-color],[data-early]');
   if(!el)return;
   if(el.dataset.chk){toggle(el.dataset.chk);return}
   if(el.dataset.edit){
@@ -1062,6 +1138,7 @@ document.addEventListener('click',function(e){
   if(el.dataset.date){selectDate(el.dataset.date);return}
   if(el.dataset.filter){filter=el.dataset.filter;render();return}
   if(el.dataset.cat){draftCat=el.dataset.cat;syncCats();return}
+  if(el.dataset.early!==undefined&&el.closest('#fEarly')){draftEarly=+el.dataset.early;syncEarly();return}
   if(el.dataset.color!==undefined&&el.closest('#fColor')){draftColor=el.dataset.color;syncColors();return}
   if(el.dataset.act){
     if(el.dataset.act==='notify')askNotify();
@@ -1112,7 +1189,7 @@ document.getElementById('bSave').addEventListener('click',function(){
   if(rDate&&!rTime)rTime='09:00';
   if(dueDate&&!dueTime)dueTime='';
   var obj= editing?editing : {id:uid(),createdAt:Date.now(),done:false};
-  obj.title=title;obj.cat=draftCat;obj.color=draftColor||'';obj.note=document.getElementById('fNote').value.trim();
+  obj.title=title;obj.cat=draftCat;obj.color=draftColor||'';obj.early=draftEarly||0;obj.note=document.getElementById('fNote').value.trim();
   obj.dueDate=dueDate||'';obj.dueTime=dueTime||'';
   obj.remindDate=rDate||'';obj.remindTime=rTime||'';
   if(!editing){obj.order=Date.now();tasks.push(obj)}
@@ -1149,6 +1226,7 @@ load();
 rollover(true);
 syncNative();
 render();
+maybeBackup();
 checkReminders();
 schedulePrecise();
 setInterval(checkReminders,20000);

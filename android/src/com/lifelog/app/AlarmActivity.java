@@ -100,19 +100,40 @@ public class AlarmActivity extends Activity {
         });
         root.addView(close);
 
-        Button snooze = new Button(this);
-        snooze.setText("10 分钟后再提醒");
-        snooze.setTextSize(17);
-        LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(
+        TextView snoozeLabel = new TextView(this);
+        snoozeLabel.setText("稍后再提醒");
+        snoozeLabel.setTextColor(Color.rgb(120, 130, 150));
+        snoozeLabel.setTextSize(13);
+        snoozeLabel.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams lps = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lps.topMargin = dp(22);
+        snoozeLabel.setLayoutParams(lps);
+        root.addView(snoozeLabel);
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams lpr = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, dp(52));
-        lp2.topMargin = dp(12);
-        snooze.setLayoutParams(lp2);
-        snooze.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                snoozeTen();
-            }
-        });
-        root.addView(snooze);
+        lpr.topMargin = dp(8);
+        row.setLayoutParams(lpr);
+        int[] mins = new int[]{5, 10, 30};
+        for (int i = 0; i < mins.length; i++) {
+            final int m = mins[i];
+            Button sb = new Button(this);
+            sb.setText(m + " 分钟");
+            sb.setTextSize(15);
+            LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(0, dp(52), 1f);
+            if (i > 0) lp2.leftMargin = dp(8);
+            sb.setLayoutParams(lp2);
+            sb.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    snooze(m);
+                }
+            });
+            row.addView(sb);
+        }
+        root.addView(row);
 
         Button open = new Button(this);
         open.setText("去 App 里勾掉");
@@ -124,7 +145,9 @@ public class AlarmActivity extends Activity {
         open.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 stopRing();
-                startActivity(new Intent(AlarmActivity.this, MainActivity.class));
+                Intent it = new Intent(AlarmActivity.this, MainActivity.class);
+                it.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                startActivity(it);
                 finish();
             }
         });
@@ -155,9 +178,9 @@ public class AlarmActivity extends Activity {
         super.onDestroy();
     }
 
-    private void snoozeTen() {
+    private void snooze(int minutes) {
         try {
-            long at = System.currentTimeMillis() + 10 * 60 * 1000;
+            long at = System.currentTimeMillis() + minutes * 60 * 1000L;
             Intent it = new Intent(this, ReminderReceiver.class);
             it.putExtra("id", taskId);
             it.putExtra("title", title);
@@ -172,7 +195,7 @@ public class AlarmActivity extends Activity {
             } else {
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
             }
-            Toast.makeText(this, "10 分钟后再提醒你", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, minutes + " 分钟后再提醒你", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
         }
         stopRing();
