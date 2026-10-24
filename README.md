@@ -6,6 +6,8 @@
 
 ![icon](docs/icon.png)
 
+**下载 APK**：[Releases · v1.4](https://github.com/Mike486-ling/lifelog-todo/releases/latest)
+
 ## 功能
 
 | 功能 | 说明 |
