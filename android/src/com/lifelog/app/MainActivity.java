@@ -32,12 +32,10 @@ public class MainActivity extends Activity {
     private static final int REQ_RING = 101;
     private WebView web;
     private android.widget.FrameLayout root;
-    private android.widget.LinearLayout splash;
-    private android.widget.TextView splashCount;
-    private android.view.View splashLine;
+    private SplashView splashView;
     /** 0 关闭 / 1 简洁（只有 A）/ 2 完整（A + 交接 B） */
     private int splashMode = 2;
-    private boolean splashGone = false;
+
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
@@ -70,123 +68,29 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** 开屏：黑底 + 图标呼吸 + 一条细线，加载完淡出 */
+    /** 开屏：SplashView 负责所有动画；这里只管挂载和收尾 */
     private void buildSplash() {
-        splashGone = false;
-        splash = new android.widget.LinearLayout(this);
-        splash.setOrientation(android.widget.LinearLayout.VERTICAL);
-        splash.setGravity(android.view.Gravity.CENTER);
-        splash.setBackgroundColor(Color.rgb(11, 18, 32));
 
-        android.widget.ImageView icon = new android.widget.ImageView(this);
         try {
-            icon.setImageResource(getApplicationInfo().icon);
+            SplashView sv = new SplashView(this, splashMode, getApplicationInfo().icon);
+            splashView = sv;
+            root.addView(sv, new android.widget.FrameLayout.LayoutParams(-1, -1));
+            web.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onPageFinished(WebView v, String url) {
+                    if (splashMode == 1 && splashView != null) splashView.handoff(null);
+                }
+            });
         } catch (Exception e) {
         }
-        int sz = (int) (84 * getResources().getDisplayMetrics().density);
-        android.widget.LinearLayout.LayoutParams ip =
-                new android.widget.LinearLayout.LayoutParams(sz, sz);
-        ip.bottomMargin = (int) (18 * getResources().getDisplayMetrics().density);
-        splash.addView(icon, ip);
-
-        android.widget.TextView name = new android.widget.TextView(this);
-        name.setText("今日待办");
-        name.setTextColor(Color.rgb(230, 234, 242));
-        name.setTextSize(15);
-        name.setGravity(android.view.Gravity.CENTER);
-        splash.addView(name);
-
-        splashCount = new android.widget.TextView(this);
-        splashCount.setTextColor(Color.rgb(120, 160, 230));
-        splashCount.setTextSize(13);
-        splashCount.setGravity(android.view.Gravity.CENTER);
-        splashCount.setAlpha(0f);
-        android.widget.LinearLayout.LayoutParams cp =
-                new android.widget.LinearLayout.LayoutParams(-2, -2);
-        cp.topMargin = (int) (10 * getResources().getDisplayMetrics().density);
-        splash.addView(splashCount, cp);
-
-        splashLine = new android.view.View(this);
-        splashLine.setBackgroundColor(Color.rgb(90, 162, 255));
-        android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
-                (int) (60 * getResources().getDisplayMetrics().density),
-                (int) (2 * getResources().getDisplayMetrics().density));
-        lp.topMargin = (int) (22 * getResources().getDisplayMetrics().density);
-        splash.addView(splashLine, lp);
-
-        root.addView(splash, new android.widget.FrameLayout.LayoutParams(-1, -1));
-
-        icon.setScaleX(0.92f);
-        icon.setScaleY(0.92f);
-        icon.animate().scaleX(1f).scaleY(1f).setDuration(520)
-                .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
-        splashLine.setScaleX(0.05f);
-        splashLine.setPivotX(0f);
-        splashLine.animate().scaleX(0.62f).setDuration(620).start();
-
-        web.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView v, String url) {
-                // 简洁模式：加载完直接淡出；完整模式等网页把「今天 x/y」发过来
-                if (splashMode == 1) splashFade();
-                else splashTimeout();
-            }
-        });
     }
 
-    private void splashTimeout() {
-        if (splashGone) return;
-        runOnUiThread(new Runnable() {
-            public void run() {
-                new android.os.Handler(android.os.Looper.getMainLooper())
-                        .postDelayed(new Runnable() {
-                            public void run() {
-                                splashFade();
-                            }
-                        }, 1200);
-            }
-        });
-    }
-
-    /** 网页数据就绪后调用：完成细线 + 显示今天进度，然后淡出 */
+    /** 数据就绪后把「今天 x/y」交给开屏 */
     void splashHandoff(final String text) {
-        if (splashMode < 2) {
-            splashFade();
-            return;
+        try {
+            if (splashView != null) splashView.handoff(text);
+        } catch (Exception e) {
         }
-        runOnUiThread(new Runnable() {
-            public void run() {
-                if (splashGone || splash == null) return;
-                splashCount.setText(text == null ? "" : text);
-                splashCount.animate().alpha(1f).setDuration(180).start();
-                splashLine.animate().scaleX(1f).setDuration(220).start();
-                new android.os.Handler(android.os.Looper.getMainLooper())
-                        .postDelayed(new Runnable() {
-                            public void run() {
-                                splashFade();
-                            }
-                        }, 300);
-            }
-        });
-    }
-
-    private void splashFade() {
-        if (splashGone || splash == null) return;
-        splashGone = true;
-        runOnUiThread(new Runnable() {
-            public void run() {
-                final android.view.View v = splash;
-                v.animate().alpha(0f).setDuration(220).withEndAction(new Runnable() {
-                    public void run() {
-                        try {
-                            root.removeView(v);
-                        } catch (Exception e) {
-                        }
-                        splash = null;
-                    }
-                }).start();
-            }
-        });
     }
 
     private void createChannel() {
