@@ -14,13 +14,18 @@ public class ReminderReceiver extends BroadcastReceiver {
     public void onReceive(Context c, Intent it) {
         String title = it.getStringExtra("title");
         String body = it.getStringExtra("body");
-        RingPlayer.start(c.getApplicationContext());
+        String sound = it.getStringExtra("sound");
+        RingPlayer.start(c.getApplicationContext(), sound);
         int id = (int) (System.currentTimeMillis() % 100000);
         show(c, id, title == null ? "待办提醒" : title, body == null ? "" : body,
-                it.getStringExtra("id"));
+                it.getStringExtra("id"), sound);
     }
 
     static void show(Context c, int id, String title, String body, String taskId) {
+        show(c, id, title, body, taskId, null);
+    }
+
+    static void show(Context c, int id, String title, String body, String taskId, String sound) {
         NotificationManager nm = (NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
 
         Notification.Builder b;
@@ -41,6 +46,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         open.putExtra("id", taskId);
         open.putExtra("title", title);
         open.putExtra("body", body);
+        open.putExtra("sound", sound);
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= 23) flags |= PendingIntent.FLAG_IMMUTABLE;
         PendingIntent pi = PendingIntent.getActivity(c, id, open, flags);
