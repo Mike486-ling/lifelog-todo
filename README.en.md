@@ -6,7 +6,7 @@ No account, no server, no tracking. Your data stays on your phone.
 
 ![icon](docs/icon.png)
 
-**Download APK**: [Releases · v1.10](https://github.com/Mike486-ling/lifelog-todo/releases/latest)
+**Download APK**: [Releases · v1.11](https://github.com/Mike486-ling/lifelog-todo/releases/latest)
 
 [中文说明](README.md)
 
@@ -20,6 +20,9 @@ No account, no server, no tracking. Your data stays on your phone.
 
 | Feature | Detail |
 |---|---|
+| **Repeating tasks** | Daily / chosen weekdays / a day each month; completing one spawns the next, un-completing removes it. |
+| **Subtasks** | Break a task into steps, tick them individually, the list shows progress (2/3). |
+| **Quick add** | Type "明天8点 跑步 30分钟" and the date, time and category are filled in for you; the title keeps only the text. |
 | **Search** | Search titles and notes across every date; tap a result to jump to that day and tick it off right there. |
 | **Undo delete** | Deleted tasks leave a 5-second "Undo" bar at the bottom. |
 | **Themes** | Dark / Light / Follow system, switched from the Data menu. |
