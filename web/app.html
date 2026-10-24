@@ -686,14 +686,8 @@ function openData(){
   d.addEventListener('click',function(e){if(e.target===d){d.close();d.remove()}});
 }
 
-/* ---------- 长按拖动排序 ---------- */
-var drag=null;
-function endDrag(){
-  if(!drag)return;
-  clearTimeout(drag.timer);
-  if(drag.row)drag.row.classList.remove('dragging');
-  drag=null;
-}
+/* ---------- 长按拖动排序（touch 版，主动拦截滚动） ---------- */
+var drag=null, HOLD=600;
 function applyOrder(){
   var rows=[].slice.call(document.querySelectorAll('#view .row'));
   var i=0;
@@ -703,53 +697,53 @@ function applyOrder(){
   });
   save();
 }
-function onDown(e){
+function dragMove(y,x){
+  if(!drag)return false;
+  if(!drag.active){
+    if(Math.abs(y-drag.y0)>12){clearTimeout(drag.timer);drag=null}
+    return false;
+  }
+  var el=document.elementFromPoint(x,y);
+  var over=el&&el.closest?el.closest('.row'):null;
+  if(over&&over!==drag.row&&over.parentNode===drag.row.parentNode){
+    var r=over.getBoundingClientRect();
+    over.parentNode.insertBefore(drag.row,(y-r.top)>r.height/2?over.nextSibling:over);
+  }
+  return true;
+}
+function dragEnd(){
+  if(!drag)return;
+  clearTimeout(drag.timer);
+  if(drag.active){
+    drag.row.classList.remove('dragging');
+    drag=null;
+    applyOrder();render();
+    try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}
+    toast('顺序已保存');
+    return;
+  }
+  drag=null;
+}
+document.addEventListener('touchstart',function(e){
+  if(e.touches.length!==1)return;
   var row=e.target.closest?e.target.closest('.row'):null;
-  if(!row||e.target.closest('button'))return;
-  if(row.classList.contains('done'))return;
-  drag={row:row,y0:e.clientY,x0:e.clientX,active:false,timer:null};
+  if(!row||e.target.closest('button')||row.classList.contains('done'))return;
+  drag={row:row,y0:e.touches[0].clientY,active:false,timer:null};
   drag.timer=setTimeout(function(){
     if(!drag)return;
     drag.active=true;
     drag.row.classList.add('dragging');
     try{navigator.vibrate&&navigator.vibrate(18)}catch(err){}
-    try{NATIVE&&NATIVE.tip&&NATIVE.tip('拖动排序')}catch(err){}
-  },380);
-  document.addEventListener('pointermove',onMove,{passive:false});
-  document.addEventListener('pointerup',onUp);
-  document.addEventListener('pointercancel',onUp);
-}
-function onMove(e){
+    try{NATIVE&&NATIVE.buzz&&NATIVE.buzz()}catch(err){}
+  },HOLD);
+},{passive:true});
+document.addEventListener('touchmove',function(e){
   if(!drag)return;
-  var dy=Math.abs(e.clientY-drag.y0), dx=Math.abs(e.clientX-drag.x0);
-  if(!drag.active){
-    if(dy>10||dx>10){endDrag()}
-    return;
-  }
-  e.preventDefault();
-  var el=document.elementFromPoint(e.clientX,e.clientY);
-  var over=el&&el.closest?el.closest('.row'):null;
-  if(over&&over!==drag.row&&over.parentNode===drag.row.parentNode){
-    var r=over.getBoundingClientRect();
-    var after=(e.clientY-r.top)>r.height/2;
-    over.parentNode.insertBefore(drag.row, after?over.nextSibling:over);
-  }
-}
-function onUp(){
-  document.removeEventListener('pointermove',onMove);
-  document.removeEventListener('pointerup',onUp);
-  document.removeEventListener('pointercancel',onUp);
-  if(drag&&drag.active){
-    var row=drag.row;
-    row.classList.remove('dragging');
-    applyOrder();
-    drag=null;
-    render();
-    toast('顺序已保存');
-    return;
-  }
-  endDrag();
-}
+  var t=e.touches[0];
+  if(dragMove(t.clientY,t.clientX))e.preventDefault();
+},{passive:false});
+document.addEventListener('touchend',dragEnd);
+document.addEventListener('touchcancel',dragEnd);
 
 /* ---------- Toast ---------- */
 var toastTimer=null;
@@ -800,7 +794,6 @@ document.addEventListener('click',function(e){
   document.getElementById(id).addEventListener('input',syncPh);
   document.getElementById(id).addEventListener('change',syncPh);
 });
-document.addEventListener('pointerdown',onDown);
 document.getElementById('fab').addEventListener('click',function(){openSheet(null)});
 document.querySelector('.quick').addEventListener('click',function(e){
   var b=e.target.closest('[data-q]');if(!b)return;
