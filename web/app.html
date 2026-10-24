@@ -16,31 +16,32 @@
   --heat0:#1b212c;--heatfut:#141821;--hdfade:rgba(14,15,19,.86);
 }
 /* 浅色主题：只覆盖变量，组件不用改 */
-body.light{
+html.light{
   --bg:#f4f5f8;--card:#ffffff;--card2:#eef1f6;--line:#e2e6ee;--txt:#171a21;
   --dim:#59616f;--dim2:#8b93a3;--line2:#c3cad6;--raise:#eff2f7;--raise2:#f7f8fb;
   --raise3:#e9edf4;--track:#e4e8ef;--navbg:rgba(255,255,255,.97);--sheetbg:#ffffff;
   --selbg:#dbe6ff;--selbd:#8fb2f5;--seltxt:#1b3d7a;--seltxt2:#2f63c9;
   --heat0:#e8ebf1;--heatfut:#f4f6f9;--hdfade:rgba(244,245,248,.9);
 }
-body.light .cd{color:#5b45a8;background:#efecff;border-color:#d9d2f7}
-body.light .cd.soon{color:#8a5a10;background:#fdf1dd;border-color:#f0dcb4}
-body.light .cd.over{color:#a63a3a;background:#fdeaea;border-color:#f3cccc}
-body.light .b-del{background:#fdeaea;color:#c0392b}
-body.light .drag-ghost{background:var(--sheetbg);border-color:#4a8cff;
+html.light .cd{color:#5b45a8;background:#efecff;border-color:#d9d2f7}
+html.light .cd.soon{color:#8a5a10;background:#fdf1dd;border-color:#f0dcb4}
+html.light .cd.over{color:#a63a3a;background:#fdeaea;border-color:#f3cccc}
+html.light .b-del{background:#fdeaea;color:#c0392b}
+html.light .drag-ghost{background:var(--sheetbg);border-color:#4a8cff;
   box-shadow:0 16px 34px -12px rgba(0,0,0,.28),0 0 0 1px #4a8cff}
-body.light .row.dragging{box-shadow:0 10px 24px -14px rgba(0,0,0,.4),0 0 0 1px #4a8cff}
-body.light .toast{color:#fff}
-body.light .fab{box-shadow:0 8px 22px -8px rgba(74,140,255,.55)}
+html.light .row.dragging{box-shadow:0 10px 24px -14px rgba(0,0,0,.4),0 0 0 1px #4a8cff}
+html.light .toast{color:#fff}
+html.light .fab{box-shadow:0 8px 22px -8px rgba(74,140,255,.55)}
 /* 浅色下热度要反过来：越忙越深，否则白底看不见 */
-body.light .hc.l1{background:#cfe0f7}
-body.light .hc.l2{background:#a3c4ee}
-body.light .hc.l3{background:#6c9cd8}
-body.light .hc.l4{background:#3b6cb3}
+html.light .hc.l1{background:#cfe0f7}
+html.light .hc.l2{background:#a3c4ee}
+html.light .hc.l3{background:#6c9cd8}
+html.light .hc.l4{background:#3b6cb3}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--txt);font-size:16px;
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--txt);font-size:16px;
   font-family:-apple-system,"Noto Sans SC","PingFang SC",system-ui,sans-serif;
   overscroll-behavior-y:contain}
+html{background:var(--bg)}
 body{padding-bottom:calc(78px + env(safe-area-inset-bottom))}
 header{position:sticky;top:0;z-index:10;padding:16px 16px 12px;
   background:linear-gradient(180deg,var(--bg) 70%,var(--hdfade));backdrop-filter:blur(10px)}
@@ -253,10 +254,31 @@ dialog::backdrop{background:#000a}
 .subbar{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--dim2)}
 .subbar i{display:block;width:34px;height:4px;border-radius:99px;background:var(--track);overflow:hidden}
 .subbar i b{display:block;height:100%;background:var(--sport)}
+.subbar[data-subtoggle]{cursor:pointer;-webkit-user-select:none;user-select:none;padding:1px 2px}
+.subrows{margin-top:9px;display:flex;flex-direction:column;gap:6px}
+.subrow{display:flex;align-items:center;gap:9px;background:var(--raise2);border:1px solid var(--line);
+  border-radius:9px;padding:7px 10px}
+.subrow .st{flex:1;min-width:0;font-size:12.5px;line-height:1.45;word-break:break-word;color:var(--txt)}
+.subrow.done .st{text-decoration:line-through;color:var(--dim2)}
+.subrow .schk{width:20px;height:20px;border-radius:6px;border:2px solid var(--line2);background:transparent;
+  color:transparent;font-size:11px;padding:0;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.subrow.done .schk{background:var(--sport);border-color:var(--sport);color:#08120e}
+.row.has-subs .grip{align-self:flex-start;margin-top:5px}
 .sres .row .mid{cursor:pointer}
 .ms{display:flex;flex-wrap:wrap;gap:7px}
 .ms span{font-size:11.5px;padding:5px 10px;border-radius:99px;background:var(--raise3);color:var(--dim2)}
 .ms span.on{background:#1c3a2b;color:#6ee7b7;border:1px solid #2d6249}
+.glist{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.gitem{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;
+  border:1px solid var(--line);background:var(--raise2);border-radius:12px;padding:10px 12px;
+  color:var(--txt);font-family:inherit;width:100%;position:relative}
+.gitem:active{background:var(--raise3)}
+.gitem:focus{outline:none}
+.gitem b{font-size:13.5px;font-weight:600}
+.gitem span{font-size:11.5px;color:var(--dim2);line-height:1.55;padding-right:46px}
+.gitem i{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-style:normal;
+  font-size:11.5px;color:var(--study)}
+.gitem.ok b::after{content:" ✓";color:var(--sport)}
 .dtop{display:flex;align-items:center;gap:9px;font-size:13.5px;padding:8px 0;border-bottom:1px solid var(--line)}
 .dtop:last-child{border-bottom:none}
 .dtop .k{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -436,9 +458,11 @@ function applyTheme(){
   else if(m==='auto'){
     try{light=!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches)}catch(e){}
   }
-  document.body.classList.toggle('light',light);
+  document.documentElement.classList.toggle('light',light);
   var meta=document.querySelector('meta[name="theme-color"]');
   if(meta)meta.setAttribute('content',light?'#f4f5f8':'#0e0f13');
+  /* 原生 WebView 底色同步，否则内容不够高时露出的还是深色 */
+  if(NATIVE&&NATIVE.setBg){try{NATIVE.setBg(light?'#f4f5f8':'#0e0f13')}catch(e){}}
 }
 function syncThemeBtns(){
   var m=themeMode();
@@ -615,15 +639,25 @@ function rowHtml(t,rank,total){
   if(t.remindDate&&t.remindTime) meta+='<span>⏰'+(t.remindDate===today()?'':(t.remindDate.slice(5))+' ')+fmtT(t.remindTime)+
     (t.early?' <span style="color:#7fb0ff">提前'+t.early+'分</span>':'')+'</span>';
   if(t.repeat) meta+='<span style="color:#7fb0ff">🔁'+repLabel(t.repeat)+'</span>';
+  var subBlock='';
   if(t.subs&&t.subs.length){
     var sd=t.subs.filter(function(x){return x.done}).length;
-    meta+='<span class="subbar">'+sd+'/'+t.subs.length+'<i><b style="width:'+Math.round(sd/t.subs.length*100)+'%"></b></i></span>';
+    var sOpen=(t.subsOpen!==false);
+    meta+='<span class="subbar" data-subtoggle="'+t.id+'">'+sd+'/'+t.subs.length+
+      '<i><b style="width:'+Math.round(sd/t.subs.length*100)+'%"></b></i>'+(sOpen?'▾':'▸')+'</span>';
+    if(sOpen){
+      subBlock='<div class="subrows">'+t.subs.map(function(sb){
+        return '<div class="subrow'+(sb.done?' done':'')+'">'+
+          '<button class="schk" data-subchk="'+t.id+':'+sb.id+'">✓</button>'+
+          '<span class="st">'+esc(sb.text)+'</span></div>';
+      }).join('')+'</div>';
+    }
   }
   if(t.note) meta+='<span>📝</span>';
   if(rank!=null)bar=prioDot(t,rank,total);
-  return '<div class="row'+(t.done?' done':'')+'" data-id="'+t.id+'">'+
+  return '<div class="row'+(t.done?' done':'')+(subBlock?' has-subs':'')+'" data-id="'+t.id+'">'+
     '<button class="chk" data-chk="'+t.id+'">✓</button>'+
-    '<div class="mid"><div class="tt">'+bar+esc(t.title)+'</div><div class="meta">'+meta+'</div></div>'+
+    '<div class="mid"><div class="tt">'+bar+esc(t.title)+'</div><div class="meta">'+meta+'</div>'+subBlock+'</div>'+
     (t.done?'':'<span class="grip">⋮⋮</span>')+
     '<button class="more" data-edit="'+t.id+'">⋯</button></div>';
 }
@@ -1314,6 +1348,65 @@ document.getElementById('stPanel').addEventListener('input',function(e){
   if(e.target&&e.target.id==='sQ'){searchQ=e.target.value;refreshSearch()}
 });
 
+/* ---------- 首次引导（权限说明） ---------- */
+function guideSeen(){
+  try{return localStorage.getItem('ll_guide_seen')==='1'}catch(e){return true}
+}
+function markGuideSeen(){
+  try{localStorage.setItem('ll_guide_seen','1')}catch(e){}
+}
+function openAppSettings(){
+  if(NATIVE&&NATIVE.openAppSettings){try{NATIVE.openAppSettings();return}catch(e){}}
+  toast('网页版没有系统设置，请到手机设置里找');
+}
+function openGuide(auto){
+  if(document.getElementById('dlg'))return;
+  var d=document.createElement('dialog');
+  d.id='dlg';
+  d.innerHTML='<h3 style="margin:0 0 6px">让提醒准时出现</h3>'+
+    '<div class="hint" style="margin-top:0">手机上这几项没开，提醒可能不响或者晚到。'+
+    '点任意一条就能跳到对应设置，开完回来即可。</div>'+
+    '<div class="glist">'+
+      '<button class="gitem" data-g="notify"><b>🔔 通知权限</b>'+
+        '<span>不给的话，提醒弹不出来，只在 App 里看得到</span><i>去开启 ›</i></button>'+
+      '<button class="gitem" data-g="exact"><b>⏰ 精确闹钟</b>'+
+        '<span>Android 12 起要单独授权，否则可能晚几分钟才响</span><i>去开启 ›</i></button>'+
+      '<button class="gitem" data-g="boot"><b>🚀 自启动</b>'+
+        '<span>重启手机后要靠它重新登记闹钟，不然当天的提醒会丢</span><i>去设置 ›</i></button>'+
+      '<button class="gitem" data-g="battery"><b>🔋 省电策略选「无限制」</b>'+
+        '<span>系统会把后台的提醒掐掉，设成无限制才稳</span><i>去设置 ›</i></button>'+
+      '<button class="gitem" data-g="popup"><b>🖥️ 后台弹出界面</b>'+
+        '<span>小米特有，不给的话到点只有通知、没有全屏闹钟</span><i>去设置 ›</i></button>'+
+    '</div>'+
+    '<div class="btns"><button class="b-main" id="gOk">知道了</button>'+
+    (auto?'<button class="b-ghost" id="gLater">稍后再说</button>':'')+'</div>';
+  document.body.appendChild(d);
+  try{d.showModal()}catch(e){d.setAttribute("open","")}
+  var done=function(){
+    markGuideSeen();
+    try{d.close()}catch(e){}
+    d.remove();
+  };
+  d.querySelector('#gOk').onclick=done;
+  var later=d.querySelector('#gLater');
+  if(later)later.onclick=done;
+  [].forEach.call(d.querySelectorAll('.gitem'),function(b){
+    b.onclick=function(){
+      var k=b.dataset.g;
+      if(k==='notify'){
+        if(NATIVE&&NATIVE.askPermission){try{NATIVE.askPermission()}catch(e){}}
+        else toast('网页版请到浏览器设置里允许通知');
+      }else if(k==='exact'){
+        if(NATIVE&&NATIVE.askExactAlarm){try{NATIVE.askExactAlarm()}catch(e){}}
+        else toast('网页版没有这个设置');
+      }else{
+        openAppSettings();
+      }
+      b.classList.add('ok');
+    };
+  });
+}
+
 /* ---------- 数据面板 ---------- */
 function openData(){
   var d=document.createElement('dialog');
@@ -1479,7 +1572,7 @@ function dragEnd(){
 document.addEventListener('touchstart',function(e){
   if(e.touches.length!==1)return;
   var el=e.target.closest?e.target.closest('.row'):null;
-  if(!el||e.target.closest('button')||el.classList.contains('done'))return;
+  if(!el||e.target.closest('button')||e.target.closest('.subrow')||el.classList.contains('done'))return;
   if(siblingRows(el.parentNode).length<2)return;
   var y=e.touches[0].clientY;
   drag={row:el,y0:y,lastY:y,active:false,timer:null,scrollY:window.scrollY};
@@ -1532,9 +1625,24 @@ function toastAction(msg,label,cb,ms){
 /* ---------- 事件 ---------- */
 document.addEventListener('click',function(e){
   if(Date.now()-justDragged<350)return;      /* 刚拖动过，别把松手当成点击 */
-  var el=e.target.closest('[data-chk],[data-edit],[data-tab],[data-filter],[data-act],[data-cat],[data-date],[data-color],[data-early],[data-theme]');
+  var el=e.target.closest('[data-chk],[data-subchk],[data-subtoggle],[data-edit],[data-tab],[data-filter],[data-act],[data-cat],[data-date],[data-color],[data-early],[data-theme]');
   if(!el)return;
   if(el.dataset.chk){toggle(el.dataset.chk);return}
+  if(el.dataset.subchk){
+    var sp=el.dataset.subchk.split(':');
+    var pt=tasks.find(function(x){return x.id===sp[0]});
+    var psb=pt&&pt.subs?pt.subs.find(function(x){return x.id===sp[1]}):null;
+    if(psb){psb.done=!psb.done;save();render()}
+    return;
+  }
+  if(el.dataset.subtoggle){
+    var ptg=tasks.find(function(x){return x.id===el.dataset.subtoggle});
+    if(ptg&&ptg.subs&&ptg.subs.length){
+      var wasOpen=(ptg.subsOpen!==false);
+      ptg.subsOpen=!wasOpen;save();render();
+    }
+    return;
+  }
   if(el.dataset.edit){
     var t=tasks.find(function(x){return x.id===el.dataset.edit});
     if(t)openSheet(t);
@@ -1562,10 +1670,7 @@ document.addEventListener('click',function(e){
     }
     else if(el.dataset.act==='jump')openJump();
     else if(el.dataset.act==='today')selectDate(today());
-    else if(el.dataset.act==='perm'){
-      if(NATIVE){try{NATIVE.askExactAlarm();return}catch(e){}}
-      toast('网页版没有这个设置');
-    }
+    else if(el.dataset.act==='perm'){openGuide(false);}
     else if(el.dataset.act==='data')openData();
     return;
   }
@@ -1717,6 +1822,7 @@ rollover(true);
 syncNative();
 render();
 maybeBackup();
+if(!guideSeen())setTimeout(function(){openGuide(true)},700);
 checkReminders();
 schedulePrecise();
 setInterval(checkReminders,20000);
