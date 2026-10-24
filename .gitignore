@@ -1,0 +1,11 @@
+build/
+gen/
+classes/
+assets/
+tools/
+keystore.jks
+*.apk
+*.idsig
+__pycache__/
+.idea/
+local.properties
