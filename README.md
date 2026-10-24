@@ -6,9 +6,11 @@
 
 ![icon](docs/icon.png)
 
-**下载 APK**：[Releases · v1.4](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　|　[English](README.en.md)
+**下载 APK**：[Releases · v1.8](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　|　[English](README.en.md)
 
-![screenshot](docs/screenshots/home.jpg)
+![截图](docs/screenshots/home.jpg)　![统计](docs/screenshots/stats.jpg)
+
+![长按拖动排序](docs/screenshots/drag.jpg)
 
 ## 功能
 
@@ -22,7 +24,10 @@
 | **稍后提醒** | 闹钟界面可直接「10 分钟后再提醒」 |
 | **逾期不丢** | 昨天没勾的任务会滚到今天顶部，标红「逾期 N 天」 |
 | **开机恢复** | 重启手机后自动重建全部闹钟 |
-| **日历导出** | 可把提醒导成 `.ics` 导入系统日历，适合分享给只用网页版的人 |
+| **拖动排序** | 长按 0.6 秒拿起，行跟手走、邻居平滑让位，拖到屏幕边缘还能自动滚动；松手即保存 |
+| **优先级圆点** | 待办前的圆点按当天剩余任务数自动红／黄／绿渐变，也可手动固定颜色 |
+| **年度统计** | 累计完成、活跃天数、最长／当前连续、分类占比、全年热力图；点某一天直接跳过去 |
+| **日历导出** | 在「⋯ 数据」里可把提醒导成 `.ics` 导入系统日历，适合分享给只用网页版的人 |
 | **备份** | 一键导出 / 导入 JSON 备份 |
 
 ## 两种用法
@@ -48,7 +53,7 @@ cd android
 
 ## 技术实现
 
-- **界面**：单文件 HTML + 原生 JS，无框架、无 CDN、无网络依赖，全部内联（约 40 KB）
+- **界面**：单文件 HTML + 原生 JS，无框架、无 CDN、无网络依赖，全部内联（约 46 KB）
 - **存储**：`localStorage`（App 内为私有目录），支持 JSON 备份
 - **提醒**：
   - 网页版 → 前台 `Notification` + 页面内计时器，或导出 `.ics`

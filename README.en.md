@@ -6,11 +6,13 @@ No account, no server, no tracking. Your data stays on your phone.
 
 ![icon](docs/icon.png)
 
-**Download APK**: [Releases · v1.4](https://github.com/Mike486-ling/lifelog-todo/releases/latest)
+**Download APK**: [Releases · v1.8](https://github.com/Mike486-ling/lifelog-todo/releases/latest)
 
 [中文说明](README.md)
 
-![screenshot](docs/screenshots/home.jpg)
+![screenshot](docs/screenshots/home.jpg)　![stats](docs/screenshots/stats.jpg)
+
+![drag to reorder](docs/screenshots/drag.jpg)
 
 ## Features
 
@@ -24,7 +26,10 @@ No account, no server, no tracking. Your data stays on your phone.
 | **Snooze** | "Remind me in 10 minutes" right from the alarm screen. |
 | **Overdue never lost** | Unfinished tasks from yesterday roll to the top of today, marked in red with "N days overdue". |
 | **Survives reboot** | All alarms are re-registered after a reboot. |
-| **Calendar export** | Export reminders as `.ics` for the system calendar — useful for people who only use the web version. |
+| **Drag to reorder** | Long-press 0.6 s to lift a row; it follows your finger while neighbours slide out of the way, auto-scrolls near the screen edges, and saves on release. |
+| **Priority dots** | A dot in front of each open task shifts red / amber / green based on how many tasks are left today; you can also pin a colour manually. |
+| **Yearly stats** | Total completed, active days, longest / current streak, category split and a full-year heat map; tap a day to jump to it. |
+| **Calendar export** | Export reminders as `.ics` from the Data menu for the system calendar — useful for people who only use the web version. |
 | **Backup** | One-tap JSON export / import. |
 
 ## Two ways to use it
