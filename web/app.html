@@ -241,6 +241,18 @@ dialog::backdrop{background:#000a}
 .hweek .hc{height:100%;min-height:9px;border-radius:2px}
 .hweek .hc.pad{background:transparent}
 .sres .row{margin-bottom:8px}
+.subs{margin-top:2px}
+.sub{display:flex;align-items:center;gap:10px;background:var(--raise2);border:1px solid var(--line);
+  border-radius:10px;padding:9px 10px;margin-bottom:6px;font-size:14px}
+.sub .st{flex:1;min-width:0;word-break:break-word}
+.sub.done .st{text-decoration:line-through;color:var(--dim2)}
+.sub .sdel{border:none;background:transparent;color:var(--dim2);font-size:15px;padding:2px 4px;font-family:inherit}
+.sub .schk{width:22px;height:22px;border-radius:7px;border:2px solid var(--line2);background:transparent;
+  color:transparent;font-size:12px;padding:0;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.sub.done .schk{background:var(--sport);border-color:var(--sport);color:#08120e}
+.subbar{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--dim2)}
+.subbar i{display:block;width:34px;height:4px;border-radius:99px;background:var(--track);overflow:hidden}
+.subbar i b{display:block;height:100%;background:var(--sport)}
 .sres .row .mid{cursor:pointer}
 .ms{display:flex;flex-wrap:wrap;gap:7px}
 .ms span{font-size:11.5px;padding:5px 10px;border-radius:99px;background:var(--raise3);color:var(--dim2)}
@@ -270,7 +282,8 @@ dialog::backdrop{background:#000a}
 <div class="sheet" id="sheet">
   <h3 id="sheetTitle">新建</h3>
   <label class="f">任务 / 想法</label>
-  <input type="text" id="fTitle" placeholder="要做什么？" autocomplete="off">
+  <input type="text" id="fTitle" placeholder="要做什么？可直接写「明天8点 跑步 30分钟」" autocomplete="off">
+  <div class="hint" id="qPreview" style="margin-top:6px;display:none"></div>
   <label class="f">分类</label>
   <div class="cats" id="fCats">
     <button data-cat="study">学习</button>
@@ -310,6 +323,31 @@ dialog::backdrop{background:#000a}
     <button data-early="10">10 分</button>
     <button data-early="30">30 分</button>
   </div>
+  <label class="f">重复</label>
+  <div class="quick" id="fRepeat">
+    <button data-rep="" class="on">不重复</button>
+    <button data-rep="daily">每天</button>
+    <button data-rep="weekly">每周</button>
+    <button data-rep="monthly">每月</button>
+  </div>
+  <div id="fDowWrap" style="display:none">
+    <label class="f">重复的星期（可多选）</label>
+    <div class="quick" id="fDow">
+      <button data-dow="1">一</button><button data-dow="2">二</button><button data-dow="3">三</button>
+      <button data-dow="4">四</button><button data-dow="5">五</button><button data-dow="6">六</button>
+      <button data-dow="0">日</button>
+    </div>
+  </div>
+  <div id="fDomWrap" style="display:none">
+    <label class="f">每月几号</label>
+    <select id="fDom"></select>
+  </div>
+  <label class="f">子任务（可选，可逐条勾掉）</label>
+  <div class="subs" id="fSubs"></div>
+  <div class="dtrow" style="margin-top:8px">
+    <input type="text" id="fSubIn" placeholder="加一条子任务，回车也可以" autocomplete="off">
+    <button class="b-ghost" id="bAddSub" style="flex:0 0 72px;padding:0;border-radius:11px;font-size:14px">添加</button>
+  </div>
   <label class="f">备注</label>
   <textarea id="fNote" placeholder="补充说明，可空"></textarea>
   <div class="btns" id="orderBtns" style="margin-top:14px">
@@ -336,6 +374,7 @@ var KEY='ll_tasks_v1', tab='today', filter='today', editing=null, draftCat='stud
 var tasks=[], storeOk=true;
 var NATIVE=(typeof AndroidHost!=='undefined')?AndroidHost:null;
 var selDate=today(), rangeA=null, rangeB=null, draftColor='', draftEarly=0;
+var draftRepeat='', draftDow=[], draftDom=0, draftSubs=[];
 
 function pad(n){return n<10?'0'+n:''+n}
 function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
@@ -575,6 +614,11 @@ function rowHtml(t,rank,total){
   if(t.deferred) meta+='<span>顺延'+t.deferred+'次</span>';
   if(t.remindDate&&t.remindTime) meta+='<span>⏰'+(t.remindDate===today()?'':(t.remindDate.slice(5))+' ')+fmtT(t.remindTime)+
     (t.early?' <span style="color:#7fb0ff">提前'+t.early+'分</span>':'')+'</span>';
+  if(t.repeat) meta+='<span style="color:#7fb0ff">🔁'+repLabel(t.repeat)+'</span>';
+  if(t.subs&&t.subs.length){
+    var sd=t.subs.filter(function(x){return x.done}).length;
+    meta+='<span class="subbar">'+sd+'/'+t.subs.length+'<i><b style="width:'+Math.round(sd/t.subs.length*100)+'%"></b></i></span>';
+  }
   if(t.note) meta+='<span>📝</span>';
   if(rank!=null)bar=prioDot(t,rank,total);
   return '<div class="row'+(t.done?' done':'')+'" data-id="'+t.id+'">'+
@@ -642,6 +686,116 @@ function renderCat(){
   return h;
 }
 
+/* ---------- 重复任务 ---------- */
+var DOW_CN=['日','一','二','三','四','五','六'];
+function repLabel(r){
+  if(!r)return '';
+  if(r.type==='daily')return '每天';
+  if(r.type==='weekly'){
+    var d=(r.dow&&r.dow.length?r.dow.slice():[]).sort();
+    return '每周'+d.map(function(x){return DOW_CN[x]}).join('');
+  }
+  if(r.type==='monthly')return '每月'+(r.dom||1)+'号';
+  return '';
+}
+function nextRepeatDate(r,base){
+  var b=fromYmd(base||today());
+  if(r.type==='daily'){
+    b.setDate(b.getDate()+1);return ymd(b);
+  }
+  if(r.type==='weekly'){
+    var dows=(r.dow&&r.dow.length)?r.dow:[b.getDay()], i, d;
+    for(i=1;i<=14;i++){
+      d=new Date(b.getTime()+i*86400000);
+      if(dows.indexOf(d.getDay())>=0)return ymd(d);
+    }
+    return ymd(new Date(b.getTime()+7*86400000));
+  }
+  if(r.type==='monthly'){
+    var dom=r.dom||b.getDate();
+    for(var k=1;k<=13;k++){
+      var mm=b.getMonth()+1+k, yy=b.getFullYear();
+      while(mm>12){mm-=12;yy++}
+      var dim=new Date(yy,mm,0).getDate();
+      var cand=yy+'-'+pad(mm)+'-'+pad(Math.min(dom,dim));
+      if(cand>base)return cand;
+    }
+  }
+  return addDays(base||today(),1);
+}
+function spawnRepeat(t){
+  var base=t.dueDate||today();
+  var nd=nextRepeatDate(t.repeat,base);
+  var nt=JSON.parse(JSON.stringify(t));
+  nt.id=uid();nt.createdAt=Date.now();nt.order=Date.now();
+  nt.done=false;delete nt.doneDate;delete nt.spawned;delete nt.notified;
+  nt.dueDate=nd;
+  if(t.remindDate&&t.dueDate){
+    var delta=Math.round((fromYmd(nd)-fromYmd(t.dueDate))/86400000);
+    nt.remindDate=addDays(t.remindDate,delta);
+  }else if(t.remindDate){
+    nt.remindDate=nd;
+  }
+  if(nt.subs&&nt.subs.length){
+    nt.subs=nt.subs.map(function(x){return {id:uid(),text:x.text,done:false}});
+  }
+  tasks.push(nt);
+  t.spawned=nt.id;
+  return nt;
+}
+
+/* ---------- 快速添加解析 ---------- */
+var CN_N={'零':0,'一':1,'两':2,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'十一':11,'十二':12};
+function cnNum(x){if(/^\d+$/.test(x))return +x;return CN_N[x]==null?null:CN_N[x]}
+function parseQuick(raw){
+  var s=' '+(raw||'')+' ', out={date:'',time:'',cat:'',clean:'',pills:[]}, m;
+  // 相对日
+  m=/(大后天|大前天|今天|明天|后天|昨天|前天)/.exec(s);
+  if(m){
+    var off={'大后天':3,'后天':2,'明天':1,'今天':0,'昨天':-1,'前天':-2,'大前天':-3}[m[1]];
+    out.date=addDays(today(),off);s=s.replace(m[0],' ');
+  }else if((m=/(下)?(?:周|星期|礼拜)([一二三四五六日天])/.exec(s))){
+    var map={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'日':0,'天':0};
+    var tgt=(map[m[2]]+6)%7, cur=(fromYmd(today()).getDay()+6)%7;
+    var delta=(tgt-cur+7)%7;if(delta===0)delta=7;
+    if(m[1])delta+=7;
+    out.date=addDays(today(),delta);s=s.replace(m[0],' ');
+  }else if((m=/(\d{1,2}|[一二三四五六七八九十]{1,3})月(\d{1,2}|[一二三四五六七八九十]{1,3})(?:日|号)/.exec(s))){
+    var mo=cnNum(m[1]),dd=cnNum(m[2]);
+    if(mo&&dd){
+      var y=+today().slice(0,4), cand=y+'-'+pad(mo)+'-'+pad(dd);
+      if(cand<today())cand=(y+1)+'-'+pad(mo)+'-'+pad(dd);
+      out.date=cand;s=s.replace(m[0],' ');
+    }
+  }
+  // N 分钟后 / 小时后
+  if((m=/(\d{1,3})\s*分钟(?:后|以后|之后)/.exec(s))){
+    var t1=new Date(Date.now()+(+m[1])*60000);
+    out.date=ymd(t1);out.time=pad(t1.getHours())+':'+pad(t1.getMinutes());s=s.replace(m[0],' ');
+  }else if((m=/(\d{1,3})\s*小时(?:后|以后|之后)/.exec(s))){
+    var t2=new Date(Date.now()+(+m[1])*3600000);
+    out.date=ymd(t2);out.time=pad(t2.getHours())+':'+pad(t2.getMinutes());s=s.replace(m[0],' ');
+  }else if((m=/(早上|上午|中午|下午|傍晚|晚上|凌晨)?\s*(\d{1,2})\s*(?:点|:|：)\s*(\d{1,2})?\s*(半)?/.exec(s))){
+    var h=+m[2], mi=m[3]?(+m[3]):(m[4]?30:0), ap=m[1]||'';
+    if((ap==='下午'||ap==='傍晚'||ap==='晚上')&&h<12)h+=12;
+    if(ap==='中午'&&h<12&&h<11)h+=12;
+    if(h>23)h=23;if(mi>59)mi=0;
+    out.time=pad(h)+':'+pad(mi);s=s.replace(m[0],' ');
+  }
+  // 时长（30 分钟 / 1 小时）不算时间，只从标题去掉
+  s=s.replace(/(\d{1,3})\s*(?:分钟|小时|分)(?![后以])/g,' ');
+  // 分类关键词
+  var KW=[['sport',/跑步|健身|运动|游泳|打球|骑车|锻炼|瑜伽|跳绳/],
+          ['study',/读书|学习|背单词|复习|作业|看书|上课|笔记|刷题/],
+          ['life',/买菜|购物|收拾|打扫|做饭|洗衣|快递|交费|缴费|理发/]];
+  for(var i=0;i<KW.length;i++){if(KW[i][1].test(raw)){out.cat=KW[i][0];break}}
+  out.clean=s.replace(/\s+/g,' ').trim();
+  if(!out.clean)out.clean=(raw||'').trim();
+  if(out.date)out.pills.push(dayTitle(out.date)==='今天'?'今天':(dayTitle(out.date)||out.date));
+  if(out.time)out.pills.push(fmtT(out.time));
+  if(out.cat)out.pills.push(CATS[out.cat].n);
+  return out;
+}
 function cdText(t){
   if(!t.dueDate)return '未设时间';
   var ms=tsOf(t.dueDate,t.dueTime||'23:59')-Date.now();
@@ -743,7 +897,12 @@ function openSheet(t){
   draftCat=t?t.cat:(tab==='long'?'long':(tab==='today'?'life':tab));
   draftColor=t?(t.color||''):'';
   draftEarly=t?(t.early||0):0;
-  syncCats();syncPh();syncColors();syncEarly();
+  draftRepeat=(t&&t.repeat)?t.repeat.type:'';
+  draftDow=(t&&t.repeat&&t.repeat.dow)?t.repeat.dow.slice():[];
+  draftDom=(t&&t.repeat&&t.repeat.dom)?t.repeat.dom:((t&&t.dueDate)?+t.dueDate.slice(8,10):new Date().getDate());
+  draftSubs=(t&&t.subs)?t.subs.map(function(x){return {id:x.id,text:x.text,done:!!x.done}}):[];
+  syncCats();syncPh();syncColors();syncEarly();syncRepeat();renderSubs();
+  var pv=document.getElementById('qPreview');if(pv){pv.style.display='none';pv.textContent=''}
   document.getElementById('bDel').style.display=t?'block':'none';
   document.getElementById('orderBtns').style.display=(t&&!t.done)?'flex':'none';
   document.getElementById('mask').classList.add('on');
@@ -765,6 +924,37 @@ function syncPh(){
     w.classList.toggle('filled', !!el.value);
   });
 }
+function syncRepeat(){
+  [].forEach.call(document.querySelectorAll('#fRepeat button'),function(b){
+    b.classList.toggle('on',(b.dataset.rep||'')===draftRepeat);
+  });
+  var dw=document.getElementById('fDowWrap'), dm=document.getElementById('fDomWrap');
+  if(dw)dw.style.display=draftRepeat==='weekly'?'block':'none';
+  if(dm)dm.style.display=draftRepeat==='monthly'?'block':'none';
+  [].forEach.call(document.querySelectorAll('#fDow button'),function(b){
+    b.classList.toggle('on',draftDow.indexOf(+b.dataset.dow)>=0);
+  });
+  var sel=document.getElementById('fDom');
+  if(sel&&draftDom)sel.value=String(draftDom);
+}
+function renderSubs(){
+  var box=document.getElementById('fSubs');
+  if(!box)return;
+  box.innerHTML=draftSubs.map(function(x,i){
+    return '<div class="sub'+(x.done?' done':'')+'">'+
+      '<button type="button" class="schk" data-si="'+i+'" data-sact="toggle">✓</button>'+
+      '<span class="st">'+esc(x.text)+'</span>'+
+      '<button type="button" class="sdel" data-si="'+i+'" data-sact="del">✕</button></div>';
+  }).join('');
+}
+function addSub(){
+  var inp=document.getElementById('fSubIn');
+  var v=(inp.value||'').trim();
+  if(!v)return;
+  draftSubs.push({id:uid(),text:v,done:false});
+  inp.value='';
+  renderSubs();
+}
 function syncEarly(){
   [].forEach.call(document.querySelectorAll('#fEarly button'),function(b){
     b.classList.toggle('on',(+b.dataset.early||0)===(+draftEarly||0));
@@ -784,12 +974,21 @@ function toggle(id){
   t.done=!t.done;
   t.doneDate=t.done?today():null;
   if(!t.done)t.notified=false;
+  var repInfo='';
+  if(t.done&&t.repeat&&!t.spawned){
+    var nt=spawnRepeat(t);
+    repInfo='　下次 '+dayLabel(nt.dueDate);
+  }
+  if(!t.done&&t.spawned){
+    tasks=tasks.filter(function(x){return x.id!==t.spawned});
+    t.spawned=null;
+  }
   save();render();
   var row=document.querySelector('#view .row[data-id="'+t.id+'"]');
   if(row&&t.done)row.classList.add('just-checked');
   var bar=document.querySelector('.bar>i');
   if(bar){bar.classList.remove('bump');void bar.offsetWidth;bar.classList.add('bump')}
-  if(t.done)toast('完成 ✓');
+  if(t.done)toast('完成 ✓'+repInfo);
   if(panelMode==='search'&&document.getElementById('sList'))refreshSearch();
 }
 function notifySupported(){return 'Notification' in window}
@@ -1372,6 +1571,51 @@ document.addEventListener('click',function(e){
   }
 });
 
+document.getElementById('fRepeat').addEventListener('click',function(e){
+  var b=e.target.closest('[data-rep]');if(!b)return;
+  draftRepeat=b.dataset.rep;
+  if(draftRepeat==='weekly'&&!draftDow.length){
+    var dd=new Date().getDay();
+    if(dd!==0&&dd!==6)draftDow=[dd];
+  }
+  if(draftRepeat==='weekly'&&draftDow.length===1){
+    var dd2=draftDow[0];
+    if(dd2===0||dd2===6)draftDow=[1,3,5];
+  }
+  syncRepeat();
+});
+document.getElementById('fDow').addEventListener('click',function(e){
+  var b=e.target.closest('[data-dow]');if(!b)return;
+  var v=+b.dataset.dow, i=draftDow.indexOf(v);
+  if(i>=0)draftDow.splice(i,1);else draftDow.push(v);
+  syncRepeat();
+});
+document.getElementById('fDom').addEventListener('change',function(){draftDom=+this.value});
+document.getElementById('bAddSub').addEventListener('click',addSub);
+document.getElementById('fSubIn').addEventListener('keydown',function(e){
+  if(e.key==='Enter'||e.keyCode===13){e.preventDefault();addSub()}
+});
+document.getElementById('fSubs').addEventListener('click',function(e){
+  var b=e.target.closest('[data-sact]');if(!b)return;
+  var i=+b.dataset.si,it=draftSubs[i];if(!it)return;
+  if(b.dataset.sact==='toggle')it.done=!it.done;
+  else draftSubs.splice(i,1);
+  renderSubs();
+});
+document.getElementById('fTitle').addEventListener('input',function(){
+  var pv=document.getElementById('qPreview');if(!pv)return;
+  var v=this.value.trim();
+  if(!v){pv.style.display='none';return}
+  var q=parseQuick(v);
+  if(!q.pills.length){pv.style.display='none';return}
+  /* 识别到就实时填进输入框，所见即所得 */
+  if(q.date){var de=document.getElementById('fDate');if(de)de.value=q.date}
+  if(q.time){var te=document.getElementById('fTime');if(te)te.value=q.time;}
+  syncPh();
+  if(q.cat&&!editing&&tab==='today'&&draftCat!==q.cat){draftCat=q.cat;syncCats()}
+  pv.style.display='block';
+  pv.innerHTML='已识别 '+q.pills.join(' · ');
+});
 ['fTime','fRTime'].forEach(function(id){
   document.getElementById(id).addEventListener('input',syncPh);
   document.getElementById(id).addEventListener('change',syncPh);
@@ -1397,8 +1641,13 @@ document.getElementById('mask').addEventListener('click',closeSheet);
 document.getElementById('bSave').addEventListener('click',function(){
   var title=document.getElementById('fTitle').value.trim();
   if(!title){toast('先写点什么');return}
+  var parsed=parseQuick(title);
+  if(parsed.clean&&parsed.clean!==title)title=parsed.clean;
   var dueDate=document.getElementById('fDate').value;
   var dueTime=document.getElementById('fTime').value;
+  if(parsed.date)dueDate=parsed.date;          /* 文字里写了日期就以文字为准 */
+  if(parsed.time)dueTime=parsed.time;
+  if(!editing&&parsed.cat&&tab==='today'&&draftCat!==parsed.cat)draftCat=parsed.cat;
   var rDate=document.getElementById('fRDate').value;
   var rTime=document.getElementById('fRTime').value;
   if(rDate&&!rTime)rTime='09:00';
@@ -1407,6 +1656,14 @@ document.getElementById('bSave').addEventListener('click',function(){
   obj.title=title;obj.cat=draftCat;obj.color=draftColor||'';obj.early=draftEarly||0;obj.note=document.getElementById('fNote').value.trim();
   obj.dueDate=dueDate||'';obj.dueTime=dueTime||'';
   obj.remindDate=rDate||'';obj.remindTime=rTime||'';
+  if(draftRepeat==='weekly'&&!draftDow.length){toast('每周重复至少选一天');return}
+  obj.repeat = !draftRepeat?null
+    : draftRepeat==='daily'?{type:'daily'}
+    : draftRepeat==='weekly'?{type:'weekly',dow:draftDow.slice().sort()}
+    : {type:'monthly',dom:+document.getElementById('fDom').value||1};
+  if(obj.repeat&&!obj.dueDate)obj.dueDate=today();
+  obj.subs = draftSubs.filter(function(x){return x.text&&x.text.trim()});
+  if(obj.repeat&&!editing&&!obj.repeatNotice){obj.repeatNotice=1}
   if(!editing){obj.order=Date.now();tasks.push(obj)}
   if(rDate){obj.notified=false}
   save();closeSheet();render();schedulePrecise();
@@ -1447,6 +1704,13 @@ document.getElementById('bDel').addEventListener('click',function(){
 });
 
 /* ---------- 启动 ---------- */
+(function initDomSel(){
+  var sel=document.getElementById('fDom');
+  if(!sel)return;
+  var h='';
+  for(var i=1;i<=31;i++)h+='<option value="'+i+'">'+i+' 号</option>';
+  sel.innerHTML=h;
+})();
 applyTheme();
 load();
 rollover(true);
