@@ -6,7 +6,7 @@
 
 ![icon](docs/icon.png)
 
-**下载 APK**：[Releases · v2.1](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　|　[English](README.en.md)
+**下载 APK**：[Releases · v2.2](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　|　[English](README.en.md)
 
 ![截图](docs/screenshots/home.jpg)　![统计](docs/screenshots/stats.jpg)
 
