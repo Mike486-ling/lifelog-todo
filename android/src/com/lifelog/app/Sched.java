@@ -46,6 +46,7 @@ public class Sched {
                 it.putExtra("id", id);
                 it.putExtra("title", o.optString("title", "待办提醒"));
                 it.putExtra("body", o.optString("body", ""));
+                it.putExtra("sound", o.optString("sound", ""));
                 int flags = PendingIntent.FLAG_UPDATE_CURRENT;
                 if (Build.VERSION.SDK_INT >= 23) flags |= PendingIntent.FLAG_IMMUTABLE;
                 PendingIntent pi = PendingIntent.getBroadcast(c, id.hashCode(), it, flags);
