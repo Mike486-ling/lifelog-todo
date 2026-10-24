@@ -6,7 +6,7 @@ No account, no server, no tracking. Your data stays on your phone.
 
 ![icon](docs/icon.png)
 
-**Download APK**: [Releases · v2.1](https://github.com/Mike486-ling/lifelog-todo/releases/latest)
+**Download APK**: [Releases · v2.2](https://github.com/Mike486-ling/lifelog-todo/releases/latest)
 
 [中文说明](README.md)
 
