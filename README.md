@@ -6,7 +6,7 @@
 
 ![icon](docs/icon.png)
 
-**下载 APK**：[Releases · v1.10](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　|　[English](README.en.md)
+**下载 APK**：[Releases · v1.11](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　|　[English](README.en.md)
 
 ![截图](docs/screenshots/home.jpg)　![统计](docs/screenshots/stats.jpg)
 
@@ -18,6 +18,9 @@
 
 | 功能 | 说明 |
 |---|---|
+| **重复任务** | 每天 / 每周几（可多选）/ 每月几号；勾完成自动生成下一次，取消完成会撤掉那次 |
+| **子任务** | 一条任务可拆几条子项，逐条勾，列表里显示进度条（2/3） |
+| **快速添加** | 标题直接写「明天8点 跑步 30分钟」，自动识别日期、时间、分类并填入，标题只留正文 |
 | **搜索** | 顶部「🔍 搜索」跨所有日期搜任务和备注，点结果直接跳到那天，可在结果里勾完成 |
 | **删除可撤销** | 删掉的任务会在底部留 5 秒「撤销」，误删能救回来 |
 | **外观** | 深色 / 浅色 / 跟随系统三档，数据菜单里切换 |
