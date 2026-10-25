@@ -35,12 +35,24 @@ public class MainActivity extends Activity {
     private SplashView splashView;
     /** 0 关闭 / 1 简洁（只有 A）/ 2 完整（A + 交接 B） */
     private int splashMode = 2;
+    /** 桌面快捷方式带来的动作：new / stats */
+    private String launchAct = "";
+    /** 本进程是否已经放过开屏 */
+    private static boolean sSplashShown = false;
+    /** 距上次开屏不足这个间隔就不再放（从后台/最近任务回来） */
+    private static final long SPLASH_GAP_MS = 30L * 60L * 1000L;
 
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
+        installCrashLog();
+        try {
+            Intent in = getIntent();
+            if (in != null && in.getStringExtra("act") != null) launchAct = in.getStringExtra("act");
+        } catch (Exception e) {
+        }
         createChannel();
 
         web = new WebView(this);
@@ -59,12 +71,91 @@ public class MainActivity extends Activity {
         root.addView(web, new android.widget.FrameLayout.LayoutParams(-1, -1));
 
         splashMode = getSharedPreferences("ui", MODE_PRIVATE).getInt("splash", 2);
-        if (splashMode > 0) buildSplash();
+        /* 只在真正的冷启动放：b==null 才可能是新开（重建时 bundle 非空）；
+         * 同进程不重复放；30 分钟内刚放过也不再放（被系统杀掉再从最近任务回来不算新开）。 */
+        long nowMs = System.currentTimeMillis();
+        long lastSplash = getSharedPreferences("ui", MODE_PRIVATE).getLong("splash_at", 0L);
+        if (splashMode > 0 && b == null && !sSplashShown && nowMs - lastSplash > SPLASH_GAP_MS) {
+            sSplashShown = true;
+            getSharedPreferences("ui", MODE_PRIVATE).edit().putLong("splash_at", nowMs).apply();
+            buildSplash();
+        }
         setContentView(root);
         web.loadUrl("file:///android_asset/app.html");
+        showLastCrash();
 
         if (Build.VERSION.SDK_INT >= 33) {
             requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1);
+        }
+    }
+
+    /** 崩溃时把栈存到内部文件；下次启动弹出来给人看（没 ADB 也能排查） */
+    private void installCrashLog() {
+        try {
+            final Thread.UncaughtExceptionHandler prev = Thread.getDefaultUncaughtExceptionHandler();
+            Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+                public void uncaughtException(Thread th, Throwable ex) {
+                    dumpCrash(ex);
+                    if (prev != null) prev.uncaughtException(th, ex);
+                }
+            });
+        } catch (Throwable ignore) {
+        }
+    }
+
+    private java.io.File crashFile() {
+        return new java.io.File(getFilesDir(), "crash.txt");
+    }
+
+    private void dumpCrash(Throwable ex) {
+        try {
+            java.io.StringWriter sw = new java.io.StringWriter();
+            java.io.PrintWriter pw = new java.io.PrintWriter(sw);
+            sw.write("time=" + new java.util.Date().toString() + "\n");
+            sw.write("sdk=" + Build.VERSION.SDK_INT + " ver=2.3.2\n");
+            ex.printStackTrace(pw);
+            pw.flush();
+            java.io.FileOutputStream fos = new java.io.FileOutputStream(crashFile());
+            fos.write(sw.toString().getBytes("UTF-8"));
+            fos.close();
+        } catch (Throwable ignore) {
+        }
+    }
+
+    /** 上次崩溃过：把栈打到屏幕上，方便截图反馈 */
+    private void showLastCrash() {
+        try {
+            final java.io.File f = crashFile();
+            if (!f.exists()) return;
+            java.io.FileInputStream fis = new java.io.FileInputStream(f);
+            byte[] buf = new byte[(int) Math.min(f.length(), 20000L)];
+            int n = fis.read(buf);
+            fis.close();
+            f.delete();
+            if (n <= 0) return;
+            final String text = new String(buf, 0, n, "UTF-8");
+            root.postDelayed(new Runnable() {
+                public void run() {
+                    try {
+                        android.widget.TextView tv = new android.widget.TextView(MainActivity.this);
+                        tv.setText(text);
+                        tv.setTextSize(9);
+                        tv.setTextColor(0xFFE2E8F4);
+                        tv.setBackgroundColor(0xFF05080E);
+                        tv.setPadding(24, 40, 24, 24);
+                        tv.setTextIsSelectable(true);
+                        android.widget.ScrollView sv = new android.widget.ScrollView(MainActivity.this);
+                        sv.addView(tv);
+                        new AlertDialog.Builder(MainActivity.this)
+                                .setTitle("上次启动崩溃了（截图给开发者）")
+                                .setView(sv)
+                                .setPositiveButton("好", null)
+                                .show();
+                    } catch (Throwable ignore) {
+                    }
+                }
+            }, 1200);
+        } catch (Throwable ignore) {
         }
     }
 
@@ -81,6 +172,35 @@ public class MainActivity extends Activity {
                     if (splashMode == 1 && splashView != null) splashView.handoff(null);
                 }
             });
+        } catch (Exception e) {
+        }
+    }
+
+    private static byte[] decodeDataUrl(String dataUrl) {
+        try {
+            if (dataUrl == null) return null;
+            int i = dataUrl.indexOf(',');
+            if (i < 0) return null;
+            return android.util.Base64.decode(dataUrl.substring(i + 1), android.util.Base64.DEFAULT);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String safeName(String name) {
+        String n = (name == null || name.length() == 0) ? "report.png" : name;
+        n = n.replaceAll("[\\/:*?\"<>|]", "_");
+        return n.length() > 60 ? n.substring(n.length() - 60) : n;
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        try {
+            setIntent(intent);
+            if (intent != null && intent.getStringExtra("act") != null) {
+                launchAct = intent.getStringExtra("act");
+            }
         } catch (Exception e) {
         }
     }
@@ -362,6 +482,56 @@ public class MainActivity extends Activity {
             splashHandoff(text);
         }
 
+        /** 通知栏/收尾通知按下的操作，取一次就清空 */
+        @JavascriptInterface
+        public String takeOps() {
+            return PendingOps.take(MainActivity.this);
+        }
+
+        /** 桌面快捷方式带进来的动作（new / stats），取一次就清空 */
+        @JavascriptInterface
+        public String takeLaunchAct() {
+            String a = launchAct == null ? "" : launchAct;
+            launchAct = "";
+            return a;
+        }
+
+        /** 每天 22:00 的收尾提醒：on=1 开，text 是通知正文 */
+        @JavascriptInterface
+        public void setWrapup(int on, String text) {
+            WrapupReceiver.schedule(MainActivity.this, on == 1, text);
+        }
+
+        /** 年度报告长图：dataUrl 是 canvas 导出的 PNG，存缓存后走系统分享 */
+        @JavascriptInterface
+        public void shareImage(final String dataUrl, final String name) {
+            try {
+                final byte[] png = decodeDataUrl(dataUrl);
+                if (png == null || png.length == 0) return;
+                final String fn = safeName(name);
+                final java.io.File f = new java.io.File(getCacheDir(), fn);
+                java.io.FileOutputStream fos = new java.io.FileOutputStream(f);
+                fos.write(png);
+                fos.close();
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        try {
+                            Uri u = ShareProvider.uriFor(MainActivity.this, f);
+                            Intent send = new Intent(Intent.ACTION_SEND);
+                            send.setType("image/png");
+                            send.putExtra(Intent.EXTRA_STREAM, u);
+                            send.putExtra(Intent.EXTRA_SUBJECT, fn);
+                            send.setClipData(android.content.ClipData.newRawUri("report", u));
+                            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                            startActivity(Intent.createChooser(send, "分享年度报告"));
+                        } catch (Exception e) {
+                        }
+                    }
+                });
+            } catch (Exception e) {
+            }
+        }
+
         /** 读剪贴板纯文本，给「批量导入」用 */
         @JavascriptInterface
         public String readClipboard() {
@@ -450,13 +620,17 @@ public class MainActivity extends Activity {
             return ringInfoJson(u);
         }
 
-        /** 系统闹钟类铃声清单，给「快捷选择」用 */
+        /** 系统闹钟类铃声清单，给「快捷选择」用。
+         *  注意：必须传 ApplicationContext。传 Activity 的话 RingtoneManager 会
+         *  startManagingCursor，游标被 close 后 Activity 每次 restart 都会 requery 它，
+         *  直接 StaleDataException 崩溃（v2.3.1 之前的秒退就是这个）。 */
         @JavascriptInterface
         public String ringtoneList() {
+            android.database.Cursor cur = null;
             try {
-                RingtoneManager rm = new RingtoneManager(MainActivity.this);
+                RingtoneManager rm = new RingtoneManager(getApplicationContext());
                 rm.setType(RingtoneManager.TYPE_ALARM);
-                android.database.Cursor cur = rm.getCursor();
+                cur = rm.getCursor();
                 JSONArray arr = new JSONArray();
                 while (cur != null && cur.moveToNext() && arr.length() < 20) {
                     Uri u = rm.getRingtoneUri(cur.getPosition());
@@ -466,10 +640,14 @@ public class MainActivity extends Activity {
                     o.put("title", ringTitle(u));
                     arr.put(o);
                 }
-                if (cur != null) cur.close();
                 return arr.toString();
             } catch (Exception e) {
                 return "[]";
+            } finally {
+                try {
+                    if (cur != null) cur.close();
+                } catch (Exception ignore) {
+                }
             }
         }
 

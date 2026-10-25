@@ -6,11 +6,15 @@
 
 ![icon](docs/icon.png)
 
-**下载 APK**：[GitHub Releases · v2.2](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　·　[国内加速直链](https://cdn.jsdelivr.net/gh/Mike486-ling/lifelog-todo@v2.2/docs/download/LifeLog-2.2.apk)　|　[English](README.en.md)
+**下载 APK**：[GitHub Releases · v2.4.1](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　·　[国内加速直链](https://cdn.jsdelivr.net/gh/Mike486-ling/lifelog-todo@v2.4.1/docs/download/LifeLog-2.4.1.apk)　|　[English](README.en.md)
 
 > 直链如果被浏览器打开成文本，长按「链接另存为」或复制到下载工具里。
 
 ![截图](docs/screenshots/home.jpg)　![统计](docs/screenshots/stats.jpg)
+
+![批量选择](docs/screenshots/batch.jpg)　![提醒方式](docs/screenshots/modes.jpg)
+
+![年度长图](docs/screenshots/yearreport.jpg)
 
 ![周历热力图](docs/screenshots/week.jpg)　![搜索](docs/screenshots/search.jpg)
 
@@ -22,6 +26,14 @@
 
 | 功能 | 说明 |
 |---|---|
+| **右滑延到明天** | 任务行右滑一下就顺延到明天，提醒时间一起跟着走，带撤销条；滑动手感走 `translate3d`，跟手不抖 |
+| **批量多选** | 「当天安排」标题旁的「批量」进入选择模式：全选 / 完成 / 改期 / 删除，误操作可撤销 |
+| **通知栏直接办** | 通知里两个按钮：**完成**（App 下次打开时落地）、**稍后 10 分钟**，不用点进去 |
+| **22:00 收尾** | 每晚定点问一句「今天还剩 N 项，要顺延到明天吗」，侧栏可关 |
+| **周复盘 + 年度长图** | 统计页顶部一张本周复盘卡（完成数 / 完成率 / 环比 / 7 日柱）；「🖼 长图」把全年统计画成 1080×1720 分享图 |
+| **提醒方式三档** | 每条任务可选「闹钟 / 静音横幅 / 震动横幅」，后两档不拉全屏、只出通知 |
+| **任务足迹** | 改期、顺延都会记一笔，编辑面板里能看到最近 6 次，回头看这东西被推迟了多少回 |
+| **点整行编辑** | 点任务任意位置就打开编辑面板，长按仍是拖动排序 |
 | **重复任务** | 每天 / 每周几（可多选）/ 每月几号；勾完成自动生成下一次，取消完成会撤掉那次 |
 | **子任务** | 一条任务可拆几条子项，**主页就直接铺在下面逐条勾**，不用进编辑页；进度条 2/3 可点开／收起 |
 | **侧边栏** | 左上角 ☰ 打开，本周概览、外观、权限自检、数据、设置都在里面 |
@@ -75,12 +87,13 @@ cd android
 
 ## 技术实现
 
-- **界面**：单文件 HTML + 原生 JS，无框架、无 CDN、无网络依赖，全部内联（约 100 KB）
+- **界面**：单文件 HTML + 原生 JS，无框架、无 CDN、无网络依赖，全部内联（约 145 KB，单文件无依赖）
 - **存储**：`localStorage`（App 内为私有目录），支持 JSON 备份
 - **提醒**：
   - 网页版 → 前台 `Notification` + 页面内计时器，或导出 `.ics`
   - App → `AlarmManager.setExactAndAllowWhileIdle` + 全屏 Intent + `MediaPlayer(USAGE_ALARM)` 循环铃声
-- **原生桥**：`addJavascriptInterface` 暴露 `sync()` / `notifyNow()` / `askPermission()` / `openAppSettings()` / `setBg()`，网页侧检测到 `AndroidHost` 就自动切换
+- **原生桥**：`addJavascriptInterface` 暴露 `sync()` / `notifyNow()` / `askPermission()` / `openAppSettings()` / `setBg()` / `takeOps()` / `shareImage()` 等，网页侧检测到 `AndroidHost` 就自动切换
+- **通知栏按钮**：原生侧收到操作后先记进 `PendingOps`，网页下次启动或回前台时取走执行（避免后台直接改 localStorage）
 
 ## 已知限制
 

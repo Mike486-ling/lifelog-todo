@@ -11,6 +11,7 @@ public class BootReceiver extends BroadcastReceiver {
         String a = it.getAction();
         if (Intent.ACTION_BOOT_COMPLETED.equals(a) || Intent.ACTION_MY_PACKAGE_REPLACED.equals(a)) {
             Sched.restore(c);
+            WrapupReceiver.restore(c);
         }
     }
 }

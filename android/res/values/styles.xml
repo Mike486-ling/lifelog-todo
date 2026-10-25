@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 只改窗口底色：系统开屏/首帧都能是深色，不再白闪。
+         不动 launchMode，也不碰 windowSplashScreen* 属性（v2.3 就栽在那上面）。 -->
+    <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">#05080E</item>
+    </style>
+</resources>

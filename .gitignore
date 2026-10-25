@@ -9,3 +9,6 @@ keystore.jks
 __pycache__/
 .idea/
 local.properties
+
+# 供 jsDelivr 加速下载的安装包
+!docs/download/*.apk

@@ -6,11 +6,15 @@ No account, no server, no tracking. Your data stays on your phone.
 
 ![icon](docs/icon.png)
 
-**Download APK**: [GitHub Releases · v2.2](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　·　[CDN mirror](https://cdn.jsdelivr.net/gh/Mike486-ling/lifelog-todo@v2.2/docs/download/LifeLog-2.2.apk)
+**Download APK**: [GitHub Releases · v2.4.1](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　·　[CDN mirror](https://cdn.jsdelivr.net/gh/Mike486-ling/lifelog-todo@v2.4.1/docs/download/LifeLog-2.4.1.apk)
 
 [中文说明](README.md)
 
 ![screenshot](docs/screenshots/home.jpg)　![stats](docs/screenshots/stats.jpg)
+
+![batch select](docs/screenshots/batch.jpg)　![reminder modes](docs/screenshots/modes.jpg)
+
+![yearly report](docs/screenshots/yearreport.jpg)
 
 ![weekly heat map](docs/screenshots/week.jpg)　![search](docs/screenshots/search.jpg)
 
@@ -22,6 +26,14 @@ No account, no server, no tracking. Your data stays on your phone.
 
 | Feature | Detail |
 |---|---|
+| **Swipe right → tomorrow** | Swipe a row right to push it (and its reminder) to tomorrow, with an undo bar; the gesture rides `translate3d` so it tracks your finger smoothly. |
+| **Multi-select** | "批量" beside the day header turns on selection: select all / complete / reschedule / delete, all undoable. |
+| **Actions in the notification** | Two buttons — **Done** (applied next time the app opens) and **Snooze 10 min** — without opening the app. |
+| **22:00 wrap-up** | A nightly nudge: "N tasks left — push them all to tomorrow?" Can be turned off in the drawer. |
+| **Weekly recap + yearly poster** | The stats page opens with a weekly recap card (done / rate / week-over-week / 7-day bars); "🖼 Poster" renders the whole year into a shareable 1080×1720 image. |
+| **Three reminder modes** | Per task: alarm / silent banner / vibrate banner. The latter two never take over the screen. |
+| **Task history** | Reschedules and deferrals are logged; the editor shows the last 6 so you can see how often something has slipped. |
+| **Tap a row to edit** | Tapping anywhere on a row opens the editor; long-press is still drag-to-reorder. |
 | **Repeating tasks** | Daily / chosen weekdays / a day each month; completing one spawns the next, un-completing removes it. |
 | **Subtasks** | Break a task into steps — they render right on the home list, tick them inline; the 2/3 progress chip expands/collapses. |
 | **First-run guide** | On first launch, the 5 permissions that matter (notifications, exact alarm, autostart, battery, background pop-up) with a direct jump to each setting. |
@@ -69,7 +81,7 @@ Output: `android/build/lifelog.apk`. This hand-rolled build pipeline works on ar
 
 ## How it works
 
-- **UI**: one HTML file + vanilla JS. No framework, no CDN, no network dependency, everything inlined (~40 KB).
+- **UI**: one HTML file + vanilla JS. No framework, no CDN, no network dependency, everything inlined (~145 KB, single file, no dependencies).
 - **Storage**: `localStorage` (private app directory on Android), with JSON backup.
 - **Reminders**:
   - Web → foreground `Notification` + in-page timer, or `.ics` export

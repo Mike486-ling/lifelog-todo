@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.lifelog.app"
-    android:versionCode="22"
-    android:versionName="2.2">
+    android:versionCode="27"
+    android:versionName="2.4.1">
 
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="33" />
 
@@ -23,7 +23,7 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="true"
         android:hardwareAccelerated="true"
-        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+        android:theme="@style/AppTheme">
 
         <activity
             android:name=".MainActivity"
@@ -34,6 +34,9 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
 
         <activity
@@ -47,6 +50,20 @@
 
         <receiver
             android:name=".ReminderReceiver"
+            android:exported="false" />
+
+        <provider
+            android:name=".ShareProvider"
+            android:authorities="com.lifelog.app.share"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+
+        <receiver
+            android:name=".ReminderActions"
+            android:exported="false" />
+
+        <receiver
+            android:name=".WrapupReceiver"
             android:exported="false" />
 
         <receiver

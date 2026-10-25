@@ -12,7 +12,9 @@ rm -rf "$OUT" gen classes
 mkdir -p gen classes "$OUT/dex"
 
 echo "[1/6] 复制网页资源"
-cp ../app.html assets/app.html
+# 本地开发目录是 ../app.html，仓库里是 ../web/app.html
+if [ -f ../app.html ]; then SRC=../app.html; else SRC=../web/app.html; fi
+mkdir -p assets && cp "$SRC" assets/app.html
 
 echo "[2/6] 生成 R.java"
 aapt package -f -m -J gen -M AndroidManifest.xml -S res -I "$AJ"
