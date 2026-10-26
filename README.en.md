@@ -6,11 +6,15 @@ No account, no server, no tracking. Your data stays on your phone.
 
 ![icon](docs/icon.png)
 
-**Download APK**: [GitHub Releases · v2.4.1](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　·　[CDN mirror](https://cdn.jsdelivr.net/gh/Mike486-ling/lifelog-todo@v2.4.1/docs/download/LifeLog-2.4.1.apk)
+**Download APK**: [GitHub Releases · v3.0.1](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　·　[CDN mirror](https://cdn.jsdelivr.net/gh/Mike486-ling/lifelog-todo@v3.0.1/docs/download/LifeLog-3.0.1.apk)
 
 [中文说明](README.md)
 
 ![screenshot](docs/screenshots/home.jpg)　![stats](docs/screenshots/stats.jpg)
+
+![long-term detail](docs/screenshots/detail-dark.jpg)　![rating](docs/screenshots/detail-rate.jpg)
+
+![daily carry-over](docs/screenshots/daily.jpg)
 
 ![batch select](docs/screenshots/batch.jpg)　![reminder modes](docs/screenshots/modes.jpg)
 
@@ -36,6 +40,9 @@ No account, no server, no tracking. Your data stays on your phone.
 | **Tap a row to edit** | Tapping anywhere on a row opens the editor; long-press is still drag-to-reorder. |
 | **Repeating tasks** | Daily / chosen weekdays / a day each month; completing one spawns the next, un-completing removes it. |
 | **Subtasks** | Break a task into steps — they render right on the home list, tick them inline; the 2/3 progress chip expands/collapses. |
+| **Task images** | Up to 9 per task, auto-rotated by EXIF and resized to 1600 px; tap for a full-screen swipe. Nothing is uploaded. |
+| **Long-term detail page** | 13 kinds (movies, books, music, knowledge…), three states, 0–10 score, image carousel, 8-line note fold, subtasks and reschedule history. |
+| **Daily tasks** | Each day seeds today + tomorrow; missed ones stay in a "carried over" section and are excluded from today's completion rate. |
 | **First-run guide** | On first launch, the 5 permissions that matter (notifications, exact alarm, autostart, battery, background pop-up) with a direct jump to each setting. |
 | **Quick add** | Type "明天8点 跑步 30分钟" and the date, time and category are filled in for you; the title keeps only the text. |
 | **Search** | Search titles and notes across every date; tap a result to jump to that day and tick it off right there. |

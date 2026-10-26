@@ -6,7 +6,7 @@
 
 ![icon](docs/icon.png)
 
-**下载 APK**：[GitHub Releases · v2.4.1](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　·　[国内加速直链](https://cdn.jsdelivr.net/gh/Mike486-ling/lifelog-todo@v2.4.1/docs/download/LifeLog-2.4.1.apk)　|　[English](README.en.md)
+**下载 APK**：[GitHub Releases · v3.0.1](https://github.com/Mike486-ling/lifelog-todo/releases/latest)　·　[国内加速直链](https://cdn.jsdelivr.net/gh/Mike486-ling/lifelog-todo@v3.0.1/docs/download/LifeLog-3.0.1.apk)　|　[English](README.en.md)
 
 > 直链如果被浏览器打开成文本，长按「链接另存为」或复制到下载工具里。
 
@@ -22,6 +22,10 @@
 
 ![主页子任务](docs/screenshots/subtasks.jpg)　![首次引导](docs/screenshots/guide.jpg)
 
+![长期详情页](docs/screenshots/detail-dark.jpg)　![评分](docs/screenshots/detail-rate.jpg)
+
+![每日任务顺延](docs/screenshots/daily.jpg)
+
 ## 功能
 
 | 功能 | 说明 |
@@ -36,6 +40,9 @@
 | **点整行编辑** | 点任务任意位置就打开编辑面板，长按仍是拖动排序 |
 | **重复任务** | 每天 / 每周几（可多选）/ 每月几号；勾完成自动生成下一次，取消完成会撤掉那次 |
 | **子任务** | 一条任务可拆几条子项，**主页就直接铺在下面逐条勾**，不用进编辑页；进度条 2/3 可点开／收起 |
+| **任务配图** | 一条任务最多 9 张，自动按 EXIF 转正、长边压到 1600px；点开全屏左右滑，图片不上传 |
+| **长期详情页** | 影视 / 书 / 音乐 / 知识等 13 类，三档状态、0~10 分、多图轮播、备注 8 行折叠、子任务和改期足迹 |
+| **每日任务** | 每天自动排今天 + 明天两条；漏做的不消失，进「顺延」区；完成率不把顺延算进分母 |
 | **侧边栏** | 左上角 ☰ 打开，本周概览、外观、权限自检、数据、设置都在里面 |
 | **铃声** | 每条任务可选系统铃声，能试听；不选就跟随全局默认 |
 | **剪贴板导入** | 从别处复制的清单直接拆成多条任务，自动识别日期时间 |

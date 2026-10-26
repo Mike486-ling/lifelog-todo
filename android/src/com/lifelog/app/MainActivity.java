@@ -17,6 +17,7 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.view.KeyEvent;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -30,7 +31,11 @@ public class MainActivity extends Activity {
     public static final String CH_PROGRESS = "progress";
     private static final int PROGRESS_ID = 9001;
     private static final int REQ_RING = 101;
+    private static final int REQ_IMAGE = 102;
+    private static final int REQ_BACKUP = 103;
     private WebView web;
+    /** 返回键正在问网页「这一层要不要我关」，防止连按重复触发 */
+    private boolean backBusy = false;
     private android.widget.FrameLayout root;
     private SplashView splashView;
     /** 0 关闭 / 1 简洁（只有 A）/ 2 完整（A + 交接 B） */
@@ -277,6 +282,44 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
+        if (req == REQ_IMAGE) {
+            if (res != RESULT_OK || data == null) {
+                runJs("window.onImagePicked&&onImagePicked({err:'cancel'})");
+                return;
+            }
+            Uri src = null;
+            try {
+                src = data.getData();
+                if (src == null) src = (Uri) data.getParcelableExtra(Intent.EXTRA_STREAM);
+            } catch (Exception e) {
+            }
+            if (src == null) {
+                runJs("window.onImagePicked&&onImagePicked({err:'cancel'})");
+                return;
+            }
+            final Uri fsrc = src;
+            new Thread(new Runnable() {
+                public void run() {
+                    String json = ImageStore.importImage(MainActivity.this, fsrc);
+                    runJs("window.onImagePicked&&onImagePicked(" + json + ")");
+                }
+            }).start();
+            return;
+        }
+        if (req == REQ_BACKUP) {
+            if (res != RESULT_OK || data == null || data.getData() == null) {
+                runJs("window.onBackupPicked&&onBackupPicked({err:'cancel'})");
+                return;
+            }
+            final Uri src = data.getData();
+            new Thread(new Runnable() {
+                public void run() {
+                    String r = Backup.read(MainActivity.this, src);
+                    runJs("window.onBackupPicked&&onBackupPicked(" + JSONObject.quote(r) + ")");
+                }
+            }).start();
+            return;
+        }
         if (req != REQ_RING) return;
         Uri u = null;
         if (res == RESULT_OK && data != null) {
@@ -289,7 +332,11 @@ public class MainActivity extends Activity {
         String title = ringTitle(u);
         String js = "window.onRingPicked&&onRingPicked(" + JSONObject.quote(uri) + ","
                 + JSONObject.quote(title) + ")";
-        final String code = js;
+        runJs(js);
+    }
+
+    /** 在 UI 线程执行一段 JS */
+    private void runJs(final String code) {
         runOnUiThread(new Runnable() {
             public void run() {
                 try {
@@ -340,8 +387,26 @@ public class MainActivity extends Activity {
 
     @Override
     public boolean onKeyDown(int code, KeyEvent e) {
-        if (code == KeyEvent.KEYCODE_BACK && web != null && web.canGoBack()) {
-            web.goBack();
+        if (code == KeyEvent.KEYCODE_BACK) {
+            if (web == null) return super.onKeyDown(code, e);
+            if (backBusy) return true;
+            backBusy = true;
+            try {
+                web.evaluateJavascript(
+                    "(function(){try{return (window.__back&&window.__back())?'1':'0'}catch(e){return '0'}})()",
+                    new ValueCallback<String>() {
+                        @Override
+                        public void onReceiveValue(String v) {
+                            backBusy = false;
+                            if (v != null && v.indexOf('1') >= 0) return;   /* 网页自己关掉了一层 */
+                            if (web != null && web.canGoBack()) web.goBack();
+                            else finish();
+                        }
+                    });
+            } catch (Throwable t) {
+                backBusy = false;
+                return super.onKeyDown(code, e);
+            }
             return true;
         }
         return super.onKeyDown(code, e);
@@ -427,6 +492,143 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public boolean saveBackup(String json, String name) {
             return Backup.write(MainActivity.this, json, name);
+        }
+
+        /** 打包备份：tasks.json + 引用的图片，成功返回 true */
+        @JavascriptInterface
+        public boolean saveBackupZip(String json, String name, String filesJson) {
+            try {
+                JSONArray a = new JSONArray(filesJson == null ? "[]" : filesJson);
+                String[] files = new String[a.length()];
+                for (int i = 0; i < a.length(); i++) files[i] = a.optString(i);
+                return Backup.writeZip(MainActivity.this, json, name, files);
+            } catch (Exception e) {
+                return false;
+            }
+        }
+
+        /** 打开系统图片选择器（Android 13+ 用 Photo Picker，旧版走 OPEN_DOCUMENT，都不需要权限） */
+        @JavascriptInterface
+        public void pickImage() {
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    try {
+                        Intent i;
+                        if (Build.VERSION.SDK_INT >= 33) {
+                            i = new Intent("android.provider.action.PICK_IMAGES");
+                            i.setType("image/*");
+                        } else {
+                            i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                            i.addCategory(Intent.CATEGORY_OPENABLE);
+                            i.setType("image/*");
+                        }
+                        startActivityForResult(i, REQ_IMAGE);
+                    } catch (Exception e) {
+                        try {
+                            Intent i2 = new Intent(Intent.ACTION_GET_CONTENT);
+                            i2.setType("image/*");
+                            startActivityForResult(i2, REQ_IMAGE);
+                        } catch (Exception e2) {
+                            toast("这台手机没有图片选择器");
+                        }
+                    }
+                }
+            });
+        }
+
+        /** 删掉一张配图（原图 + 缩略图） */
+        @JavascriptInterface
+        public void deleteImage(String id) {
+            ImageStore.delete(MainActivity.this, id);
+        }
+
+        /** 图片占用情况 {"count":n,"bytes":x} */
+        @JavascriptInterface
+        public String imgStats() {
+            return ImageStore.stats(MainActivity.this);
+        }
+
+        /** 配图的 content:// 前缀，网页侧拿它自己拼 <img src> */
+        @JavascriptInterface
+        public String imgBase() {
+            return "content://" + getPackageName() + ".share/att/";
+        }
+
+        /** 兜底：直接把图片读成 data URL（content:// 万一加载失败时用） */
+        @JavascriptInterface
+        public String imgDataUrl(String id, String ext, boolean thumb) {
+            try {
+                java.io.File f = thumb
+                        ? ImageStore.thumbFor(MainActivity.this, id, ext)
+                        : ImageStore.fileFor(MainActivity.this, id, ext);
+                if (!f.isFile()) return "";
+                byte[] b = new byte[(int) f.length()];
+                java.io.FileInputStream in = new java.io.FileInputStream(f);
+                try {
+                    int off = 0;
+                    int n;
+                    while (off < b.length && (n = in.read(b, off, b.length - off)) > 0) off += n;
+                } finally {
+                    try {
+                        in.close();
+                    } catch (Exception ignored) {
+                    }
+                }
+                String mime = "image/jpeg";
+                if ("png".equals(ext)) mime = "image/png";
+                else if ("gif".equals(ext)) mime = "image/gif";
+                else if ("webp".equals(ext)) mime = "image/webp";
+                if (thumb && !"png".equals(ext)) mime = "image/jpeg";
+                return "data:" + mime + ";base64,"
+                        + android.util.Base64.encodeToString(b, android.util.Base64.NO_WRAP);
+            } catch (Throwable t) {
+                return "";
+            }
+        }
+
+        /** 分享某张配图 */
+        @JavascriptInterface
+        public void shareImageFile(final String id, final String ext, final String name) {
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    try {
+                        String fn = "att-" + id + "." + ext;
+                        Uri u = ShareProvider.uriForAtt(MainActivity.this, fn);
+                        String mime = "image/jpeg";
+                        if ("png".equals(ext)) mime = "image/png";
+                        else if ("gif".equals(ext)) mime = "image/gif";
+                        else if ("webp".equals(ext)) mime = "image/webp";
+                        Intent send = new Intent(Intent.ACTION_SEND);
+                        send.setType(mime);
+                        send.putExtra(Intent.EXTRA_STREAM, u);
+                        send.putExtra(Intent.EXTRA_SUBJECT, name == null ? "图片" : name);
+                        send.setClipData(android.content.ClipData.newRawUri("img", u));
+                        send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        startActivity(Intent.createChooser(send, "分享图片"));
+                    } catch (Exception e) {
+                    }
+                }
+            });
+        }
+
+        /** 选一个备份文件（json 或含图片的 zip） */
+        @JavascriptInterface
+        public void pickBackup() {
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    try {
+                        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                        i.addCategory(Intent.CATEGORY_OPENABLE);
+                        i.setType("*/*");
+                        i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
+                                "application/zip", "application/x-zip-compressed",
+                                "application/json", "text/plain", "application/octet-stream"});
+                        startActivityForResult(i, REQ_BACKUP);
+                    } catch (Exception e) {
+                        toast("这台手机没有文件选择器");
+                    }
+                }
+            });
         }
 
         /** 跟随网页主题切换 WebView 底色，避免内容不够高时露出深色 */
