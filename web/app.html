@@ -625,6 +625,15 @@ dialog::backdrop{background:#000a}
 .subrow.done .schk{background:var(--sport);border-color:var(--sport);color:#08120e}
 .row.has-subs .grip{align-self:flex-start;margin-top:5px}
 .sres .row .mid{cursor:pointer}
+/* 回收站 */
+.brow{border:1px solid var(--line);border-radius:13px;padding:11px 13px;margin-bottom:9px;background:var(--card)}
+.brow .bt{font-size:13.5px;font-weight:600}
+.brow .bs{font-size:11.5px;font-weight:400;color:var(--dim2);margin-top:2px}
+.brow .bn{font-size:12.5px;color:var(--dim);margin-top:6px;line-height:1.5;word-break:break-word}
+.brow .bb{display:flex;gap:8px;margin-top:10px}
+.brow .bb button{flex:1;padding:8px 0;border-radius:10px;border:1px solid var(--line2);
+  background:transparent;color:var(--txt);font-size:13px;font-family:inherit}
+.brow .bb button.dg{color:var(--danger);border-color:var(--danger)}
 .ms{display:flex;flex-wrap:wrap;gap:7px}
 .ms span{font-size:11.5px;padding:5px 10px;border-radius:99px;background:var(--raise3);color:var(--dim2)}
 .ms span.on{background:#1c3a2b;color:#6ee7b7;border:1px solid #2d6249}
@@ -736,7 +745,10 @@ dialog::backdrop{background:#000a}
       <button data-rep="" class="on">不重复</button>
       <button data-rep="daily">每天</button>
       <button data-rep="weekly">每周</button>
+      <button data-rep="weekdays">工作日</button>
+      <button data-rep="biweekly">每两周</button>
       <button data-rep="monthly">每月</button>
+      <button data-rep="yearly">每年</button>
     </div>
     <div id="fDowWrap" style="display:none">
       <div class="quick" id="fDow">
@@ -748,6 +760,7 @@ dialog::backdrop{background:#000a}
     <div id="fDomWrap" style="display:none">
       <select id="fDom"></select>
     </div>
+    <div id="fYTip" class="hint" style="display:none;margin-top:6px">按「日期」里的月/日，每年重复一次。</div>
 
     <div class="quick" id="fQuick">
       <button data-q="now">1 分钟后</button>
@@ -849,7 +862,7 @@ var longSub='all', draftKind='other', draftSt='want', draftRating=0, noteOpen={}
 var KEY='ll_tasks_v1', tab='today', filter='today', editing=null, draftCat='study';
 var tasks=[], storeOk=true;
 var NATIVE=(typeof AndroidHost!=='undefined')?AndroidHost:null;
-var APP_VER='3.0.2';
+var APP_VER='3.1.0';
 var selDate=today(), rangeA=null, rangeB=null, draftColor='', draftEarly=0, draftSound='', ringNames={}, globalDefaultName='';
 var draftRepeat='', draftDow=[], draftDom=0, draftSubs=[], draftMode='alarm';
 var draftImgs=[], IMG_MAXN=9, IMG_MAX=10*1024*1024, IMG_BASE='';
@@ -1417,11 +1430,20 @@ var DOW_CN=['日','一','二','三','四','五','六'];
 function repLabel(r){
   if(!r)return '';
   if(r.type==='daily')return '每天';
+  if(r.type==='weekdays')return '工作日';
   if(r.type==='weekly'){
     var d=(r.dow&&r.dow.length?r.dow.slice():[]).sort();
     return '每周'+d.map(function(x){return DOW_CN[x]}).join('');
   }
+  if(r.type==='biweekly'){
+    var d2=(r.dow&&r.dow.length?r.dow.slice():[]).sort();
+    return '每两周'+(d2.length?'周'+d2.map(function(x){return DOW_CN[x]}).join(''):'一次');
+  }
   if(r.type==='monthly')return '每月'+(r.dom||1)+'号';
+  if(r.type==='yearly'){
+    if(r.md)return '每年'+(+r.md.slice(0,2))+'月'+(+r.md.slice(3,5))+'日';
+    return '每年一次';
+  }
   return '';
 }
 function nextRepeatDate(r,base){
@@ -1445,6 +1467,29 @@ function nextRepeatDate(r,base){
       var dim=new Date(yy,mm,0).getDate();
       var cand=yy+'-'+pad(mm)+'-'+pad(Math.min(dom,dim));
       if(cand>base)return cand;
+    }
+  }
+  if(r.type==='weekdays'){
+    for(var w=1;w<=7;w++){
+      var dw2=new Date(b.getTime()+w*86400000), g2=dw2.getDay();
+      if(g2>=1&&g2<=5)return ymd(dw2);
+    }
+  }
+  if(r.type==='biweekly'){
+    var anc=fromYmd(r.anchor||base||ymd(b)), dows2=(r.dow&&r.dow.length)?r.dow:[anc.getDay()];
+    for(var q=1;q<=21;q++){
+      var dq=new Date(b.getTime()+q*86400000);
+      if(dows2.indexOf(dq.getDay())<0)continue;
+      var wk=Math.floor((dq.getTime()-anc.getTime())/604800000);
+      if(wk%2===0)return ymd(dq);
+    }
+    return ymd(new Date(b.getTime()+14*86400000));
+  }
+  if(r.type==='yearly'){
+    var bs=base||ymd(b), md=r.md||(pad(b.getMonth()+1)+'-'+pad(b.getDate()));
+    for(var y2=0;y2<8;y2++){
+      var c2=(b.getFullYear()+y2)+'-'+md;
+      if(c2>bs&&ymd(fromYmd(c2))===c2)return c2;
     }
   }
   return addDays(base||today(),1);
@@ -1488,6 +1533,15 @@ function repHitDay(r,ds){
     var dom=r.dom||1, dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
     return d.getDate()===Math.min(dom,dim);
   }
+  if(r.type==='weekdays'){var g=d.getDay();return g>=1&&g<=5}
+  if(r.type==='biweekly'){
+    var anc2=r.anchor||ds, a0=fromYmd(anc2);
+    var dows3=(r.dow&&r.dow.length)?r.dow:[a0.getDay()];
+    if(dows3.indexOf(d.getDay())<0)return false;
+    var wk2=Math.floor((fromYmd(ds).getTime()-a0.getTime())/604800000);
+    return wk2>=0&&wk2%2===0;
+  }
+  if(r.type==='yearly')return !!r.md&&ds.slice(5)===r.md;
   return false;
 }
 function repSkipMap(){try{return JSON.parse(localStorage.getItem('ll_rep_skip')||'{}')||{}}catch(e){return {}}}
@@ -1558,6 +1612,24 @@ function ensureRepeats(){
 
 /* ---------- 快速添加解析 ---------- */
 var CN_N={'零':0,'一':1,'两':2,'二':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十':10,'十一':11,'十二':12};
+/* ---------- 数据版本 ----------
+   以前 migrateLong / migrateRepeat 是无条件跑的，数据格式没有版本号，
+   以后要改结构就没退路。现在存 ll_schema，迁移按顺序只跑一次。 */
+var SCHEMA_CUR=2;
+function schemaVer(){try{return +(localStorage.getItem('ll_schema')||1)}catch(e){return 1}}
+function setSchemaVer(v){try{localStorage.setItem('ll_schema',String(v))}catch(e){}}
+var MIGRATIONS=[
+  {v:2,run:function(){migrateLong();migrateRepeat()}}
+];
+function runMigrations(){
+  var cur=schemaVer(), did=false;
+  MIGRATIONS.forEach(function(m){
+    if(m.v<=cur)return;
+    try{m.run()}catch(e){}
+    setSchemaVer(m.v);did=true;
+  });
+  if(did)save();
+}
 function cnNum(x){if(/^\d+$/.test(x))return +x;return CN_N[x]==null?null:CN_N[x]}
 function parseQuick(raw){
   var s=' '+(raw||'')+' ', out={date:'',time:'',cat:'',clean:'',pills:[]}, m;
@@ -2044,6 +2116,94 @@ function updateProgress(){
   try{NATIVE.progress(s)}catch(e){}
 }
 
+/* ---------- 危险操作前的本地快照（3 份滚动） ----------
+   导入会整份替换、清空会全丢，这两个动作以前只有一次 confirm。
+   做之前先把当前数据塞进 ll_snap，抽屉里就能「恢复上一次」。 */
+var SNAP_KEY='ll_snap', SNAP_N=3;
+function tsText(ms){
+  var d=new Date(ms);
+  return (d.getMonth()+1)+'月'+d.getDate()+'日 '+pad(d.getHours())+':'+pad(d.getMinutes());
+}
+function snapList(){try{return JSON.parse(localStorage.getItem(SNAP_KEY)||'[]')||[]}catch(e){return []}}
+function snapshot(tag){
+  if(!tasks.length)return;
+  var a=snapList();
+  a.unshift({at:Date.now(),tag:tag||'操作',n:tasks.length,data:tasks});
+  try{localStorage.setItem(SNAP_KEY,JSON.stringify(a.slice(0,SNAP_N)))}catch(e){}
+}
+function restoreSnap(){
+  var a=snapList();
+  if(!a.length){toast('还没有快照');return}
+  var s=a[0];
+  if(!confirm('恢复「'+s.tag+'」之前的 '+s.n+' 条数据？\n快照时间 '+tsText(s.at)+'，当前数据会先存一份，不怕误点。'))return;
+  snapshot('恢复前');
+  tasks=s.data;save();render();schedulePrecise();closeDrawer();
+  toast('已回到 '+tsText(s.at)+' 的状态');
+}
+
+/* ---------- 回收站 ----------
+   删除不再「5 秒后就没了」：先落 ll_bin，7 天内可捞回来。
+   单条删除、批量删除、删除整条重复都进这里。 */
+var BIN_KEY='ll_bin', BIN_DAYS=7;
+function binList(){
+  var a;
+  try{a=JSON.parse(localStorage.getItem(BIN_KEY)||'[]')||[]}catch(e){a=[]}
+  var cut=Date.now()-BIN_DAYS*86400000, total=0, out=[];
+  a.forEach(function(e){
+    if(!e||e.at<cut)return;
+    var items=e.items||[];
+    if(total+items.length>300)return;
+    total+=items.length;out.push(e);
+  });
+  return out.slice(0,60);
+}
+function binSave(a){try{localStorage.setItem(BIN_KEY,JSON.stringify(a))}catch(e){}}
+function binAdd(items,tag){
+  items=(items||[]).filter(Boolean);
+  if(!items.length)return '';
+  var a=binList(), id=uid();
+  a.unshift({id:id,at:Date.now(),tag:tag||'删除',items:items});
+  binSave(a);return id;
+}
+function binDrop(id){binSave(binList().filter(function(e){return e.id!==id}))}
+function binCount(){var n=0;binList().forEach(function(e){n+=(e.items||[]).length});return n}
+function binRestore(id){
+  var a=binList(), e=null;
+  a.forEach(function(x){if(x.id===id)e=x});
+  if(!e)return;
+  (e.items||[]).forEach(function(t){
+    tasks.push(t);
+    if(t.repeat&&t.dueDate)repSkipUnmark(seriesOf(t),t.dueDate);
+    imgsOf(t).forEach(function(x){orphanDel(x.id)});
+  });
+  binSave(a.filter(function(x){return x.id!==id}));
+  save();render();schedulePrecise();openBin();
+  toast('已恢复 '+(e.items||[]).length+' 条');
+}
+function binHtml(){
+  var a=binList();
+  var body=a.length?a.map(function(e){
+    var items=e.items||[];
+    var names=items.slice(0,3).map(function(t){return esc(t.title||'（无标题）')}).join('、')+(items.length>3?' 等 '+items.length+' 条':'');
+    return '<div class="brow"><div class="bt">'+esc(e.tag)+' · '+items.length+' 条'+
+      '<div class="bs">'+tsText(e.at)+' 删除</div></div>'+
+      '<div class="bn">'+names+'</div>'+
+      '<div class="bb"><button data-binr="'+esc(e.id)+'">恢复</button>'+
+      '<button data-binx="'+esc(e.id)+'" class="dg">彻底删除</button></div></div>';
+  }).join(''):'<div class="hint" style="margin-top:16px">回收站是空的。<br>删除的任务会在这里留 '+BIN_DAYS+' 天。</div>';
+  return '<div class="p-head"><h2>回收站</h2><button class="p-x" id="stClose">✕</button></div>'+
+    '<div class="hint" style="margin:0 0 12px">删除的任务先放这儿，'+BIN_DAYS+' 天后自动清掉。配图要等你「彻底删除」后才回收。</div>'+
+    body;
+}
+function openBin(){
+  panelMode='bin';
+  var p=document.getElementById('stPanel');
+  p.innerHTML=binHtml();
+  p.scrollTop=0;
+  document.getElementById('stMask').classList.add('on');
+  p.classList.add('on');
+}
+
 /* ---------- 自动备份（每周一次） ---------- */
 function backupName(){return '任务备份-'+today()+'.json'}
 function doBackup(manual){
@@ -2084,6 +2244,7 @@ function lastBackupText(){
 function applyImport(arr,imgCount){
   if(!Array.isArray(arr)){toast('文件格式不对');return}
   if(!confirm('导入将替换当前的 '+tasks.length+' 条数据，确定？'))return;
+  snapshot('导入替换前');
   tasks=arr;
   save();render();
   var dlg=document.getElementById('dlg');
@@ -2114,7 +2275,7 @@ function syncMoreSum(){
   var el=document.getElementById('moreSum'); if(!el)return;
   var a=[];
   if(draftColor)a.push({red:'红',amber:'黄',green:'绿'}[draftColor]||'');
-  if(draftRepeat)a.push({daily:'每天',weekly:'每周',monthly:'每月'}[draftRepeat]||'每周');
+  if(draftRepeat)a.push({daily:'每天',weekly:'每周',weekdays:'工作日',biweekly:'每两周',monthly:'每月',yearly:'每年'}[draftRepeat]||'每周');
   var rv=document.getElementById('fRTime'), rd=document.getElementById('fRDate');
   if((rv&&rv.value)||(rd&&rd.value))a.push('⏰');
   if(draftEarly)a.push('提前'+draftEarly+'分');
@@ -2192,8 +2353,11 @@ function syncRepeat(){
     b.classList.toggle('on',(b.dataset.rep||'')===draftRepeat);
   });
   var dw=document.getElementById('fDowWrap'), dm=document.getElementById('fDomWrap');
-  if(dw)dw.style.display=draftRepeat==='weekly'?'block':'none';
+  var two=(draftRepeat==='weekly'||draftRepeat==='biweekly');
+  if(dw)dw.style.display=two?'block':'none';
   if(dm)dm.style.display=draftRepeat==='monthly'?'block':'none';
+  var yt=document.getElementById('fYTip');
+  if(yt)yt.style.display=draftRepeat==='yearly'?'block':'none';
   [].forEach.call(document.querySelectorAll('#fDow button'),function(b){
     b.classList.toggle('on',draftDow.indexOf(+b.dataset.dow)>=0);
   });
@@ -2982,6 +3146,15 @@ document.getElementById('stPanel').addEventListener('click',function(e){
   var btn=e.target.closest?e.target.closest('button'):null;
   if(btn){
     if(btn.id==='stClose'){closeStats();return}
+    if(btn.dataset.binr){binRestore(btn.dataset.binr);return}
+    if(btn.dataset.binx){
+      if(!confirm('彻底删除这条？里面的任务和配图都会回收，不能撤销。'))return;
+      binDrop(btn.dataset.binx);openBin();return;
+    }
+    if(btn.dataset.binc){
+      if(!confirm('清空回收站？里面的任务将无法恢复。'))return;
+      binSave([]);openBin();return;
+    }
     if(btn.dataset.so!=null){
       searchOnlyOpen=btn.dataset.so==='1';
       [].forEach.call(document.querySelectorAll('#stPanel [data-so]'),function(x){
@@ -3186,6 +3359,13 @@ function renderDrawer(){
   /* 数据 */
   h+='<div class="dr-sec"><h4>数据</h4>';
   if(hasB)h+='<button class="dr-row" data-dact="backup"><span class="k">💾 立即备份</span><span class="v">'+esc(lastBackupText())+'</span></button>';
+  h+='<button class="dr-row" data-dact="bin"><span class="k">🗑️ 回收站</span><span class="v">'+
+     (binCount()?binCount()+' 条 ›':'空 ›')+'</span></button>';
+  (function(){
+    var s=snapList()[0];
+    if(s)h+='<button class="dr-row" data-dact="snap"><span class="k">↩️ 恢复到 '+tsText(s.at)+' 之前</span>'+
+      '<span class="v">'+s.tag+' · '+s.n+' 条 ›</span></button>';
+  })();
   h+='<button class="dr-row" data-dact="paste"><span class="k">📋 从剪贴板导入</span><span class="v">批量 +</span></button>';
   h+='<button class="dr-row" data-dact="tpl"><span class="k">📦 模板组合</span><span class="v">4 套 ›</span></button>';
   h+='<button class="dr-row" data-dact="exp"><span class="k">⬇️ 导出备份（JSON）</span><span class="v">›</span></button>';
@@ -3263,6 +3443,8 @@ document.getElementById('drawer').addEventListener('click',function(e){
   }
   if(a==='guide'){closeDrawer();openGuide(false);return}
   if(a==='backup'){doBackup(true);renderDrawer();return}
+  if(a==='bin'){closeDrawer();openBin();return}
+  if(a==='snap'){restoreSnap();return}
   if(a==='exp'){
     var ok=download('任务备份-'+today()+'.json',JSON.stringify(tasks,null,2),'application/json');
     toast(ok?'备份已导出':'导出失败');return;
@@ -3272,8 +3454,9 @@ document.getElementById('drawer').addEventListener('click',function(e){
     exportCal(tasks.filter(function(x){return !x.done&&(x.remindDate||x.dueDate)}),'全部提醒.ics');return;
   }
   if(a==='clear'){
-    if(!confirm('清空后无法恢复，确定？'))return;
-    tasks=[];save();render();closeDrawer();toast('已清空');return;
+    if(!confirm('清空全部任务？\n清空前会自动存一份快照，可以从「恢复上一次」找回来。'))return;
+    snapshot('清空全部');
+    tasks=[];save();render();closeDrawer();toast('已清空 · 可从「恢复上一次」找回');return;
   }
   if(a==='stats'){closeDrawer();openStats();return}
   if(a==='search'){closeDrawer();openSearch();return}
@@ -3900,6 +4083,7 @@ function selAction(k){
       if(r.t.repeat&&r.t.dueDate)repSkipMark(seriesOf(r.t),r.t.dueDate);
       imgsOf(r.t).forEach(function(x){orphanAdd(x.id)});
     });
+    var binId=binAdd(removed.map(function(r){return r.t}),'批量删除');
     save();exitSelect();schedulePrecise();
     toastAction('已删除 '+removed.length+' 条','撤销',function(){
       removed.slice().sort(function(a,b){return a.i-b.i}).forEach(function(r){
@@ -3907,6 +4091,7 @@ function selAction(k){
         if(r.t.repeat&&r.t.dueDate)repSkipUnmark(seriesOf(r.t),r.t.dueDate);
         imgsOf(r.t).forEach(function(x){orphanDel(x.id)});
       });
+      if(binId)binDrop(binId);
       save();render();schedulePrecise();
     },5000);
     return;
@@ -4103,11 +4288,11 @@ document.addEventListener('click',function(e){
 document.getElementById('fRepeat').addEventListener('click',function(e){
   var b=e.target.closest('[data-rep]');if(!b)return;
   draftRepeat=b.dataset.rep;
-  if(draftRepeat==='weekly'&&!draftDow.length){
+  if((draftRepeat==='weekly'||draftRepeat==='biweekly')&&!draftDow.length){
     var dd=new Date().getDay();
     if(dd!==0&&dd!==6)draftDow=[dd];
   }
-  if(draftRepeat==='weekly'&&draftDow.length===1){
+  if((draftRepeat==='weekly'||draftRepeat==='biweekly')&&draftDow.length===1){
     var dd2=draftDow[0];
     if(dd2===0||dd2===6)draftDow=[1,3,5];
   }
@@ -4253,10 +4438,16 @@ document.getElementById('bSave').addEventListener('click',function(){
   obj.dueDate=dueDate||'';obj.dueTime=dueTime||'';
   if(editing&&oldDue&&obj.dueDate&&oldDue!==obj.dueDate)pushHist(obj,'改期',oldDue,obj.dueDate);
   obj.remindDate=rDate||'';obj.remindTime=rTime||'';
-  if(draftRepeat==='weekly'&&!draftDow.length){toast('每周重复至少选一天');return}
+  if((draftRepeat==='weekly'||draftRepeat==='biweekly')&&!draftDow.length){
+    /* 没选就按这条任务本身的星期几，别卡在「周末默认空」上 */
+    draftDow=[fromYmd(dueDate||today()).getDay()];
+  }
   obj.repeat = !draftRepeat?null
     : draftRepeat==='daily'?{type:'daily'}
+    : draftRepeat==='weekdays'?{type:'weekdays'}
     : draftRepeat==='weekly'?{type:'weekly',dow:draftDow.slice().sort()}
+    : draftRepeat==='biweekly'?{type:'biweekly',dow:draftDow.slice().sort(),anchor:obj.dueDate||today()}
+    : draftRepeat==='yearly'?{type:'yearly',md:(obj.dueDate||today()).slice(5)}
     : {type:'monthly',dom:+document.getElementById('fDom').value||1};
   if(obj.repeat&&!obj.dueDate)obj.dueDate=today();
   obj.subs = draftSubs.filter(function(x){return x.text&&x.text.trim()});
@@ -4275,11 +4466,13 @@ function deleteTask(t){
   if(removed.repeat&&removed.dueDate)repSkipMark(seriesOf(removed),removed.dueDate);
   tasks.splice(idx,1);
   imgsOf(removed).forEach(function(x){orphanAdd(x.id)});
+  var binId=binAdd([removed],'删除任务');
   save();closeSheet();render();schedulePrecise();
   toastAction('已删除「'+(removed.title.length>12?removed.title.slice(0,12)+'…':removed.title)+'」','撤销',function(){
     tasks.splice(Math.min(idx,tasks.length),0,removed);
     if(removed.repeat&&removed.dueDate)repSkipUnmark(seriesOf(removed),removed.dueDate);
     imgsOf(removed).forEach(function(x){orphanDel(x.id)});
+    if(binId)binDrop(binId);
     save();render();schedulePrecise();
     toast('已恢复');
   },5000);
@@ -4303,6 +4496,7 @@ function deleteSeries(t){
   gone.forEach(function(g){imgsOf(g.t).forEach(function(x){orphanAdd(x.id)})});
   var m=repSkipMap(), oldSkip=m[sid];
   if(oldSkip){delete m[sid];try{localStorage.setItem('ll_rep_skip',JSON.stringify(m))}catch(e){}}
+  var binId=binAdd(gone.map(function(g){return g.t}),'删除整条重复');
   save();closeSheet();render();schedulePrecise();
   toastAction('已删除整条重复 · '+gone.length+' 条','撤销',function(){
     gone.forEach(function(g){
@@ -4310,6 +4504,7 @@ function deleteSeries(t){
       imgsOf(g.t).forEach(function(x){orphanDel(x.id)});
     });
     if(oldSkip){var mm=repSkipMap();mm[sid]=oldSkip;try{localStorage.setItem('ll_rep_skip',JSON.stringify(mm))}catch(e){}}
+    if(binId)binDrop(binId);
     save();render();schedulePrecise();
     toast('已恢复');
   },6000);
@@ -4368,8 +4563,7 @@ if(oneHand())document.documentElement.classList.add('onehand');
 load();
 try{longSub=localStorage.getItem('ll_long_sub')||'all'}catch(e){}
 if(!LK[longSub]&&longSub!=='all')longSub='all';
-migrateLong();
-migrateRepeat();
+runMigrations();
 rollover(true);
 ensureRepeats();
 syncNative();
