@@ -502,6 +502,8 @@ textarea{resize:vertical;min-height:64px;line-height:1.55}
   border-radius:8px;padding:7px 11px;font-size:12.5px;font-family:inherit}
 .quick button:active{background:#212835;color:var(--txt)}
 .quick button.on{background:var(--selbg);color:var(--seltxt);border-color:var(--selbd)}
+/* 重复类型有 7 个，横向滚动看不到「每年」，这里允许换行 */
+#fRepeat{flex-wrap:wrap;overflow:visible;row-gap:7px}
 .quick.early{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;overflow:visible}
 .quick.early>button{font-size:12px;padding:9px 2px;text-align:center}
 .cats{display:flex;gap:8px}
