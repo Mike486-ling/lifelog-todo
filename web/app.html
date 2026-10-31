@@ -99,6 +99,16 @@ main{padding:4px 16px 24px}
 .sec-h b{font-weight:600;color:var(--txt)}
 .sec-h b.od{color:var(--danger)}
 .sec-h .cnt{color:var(--dim2)}
+/* 顺延区默认收起：只留一行摘要，点它展开明细（免得把今天的活压到屏幕外） */
+.sec.oclosed>.row{display:none}
+.sec.oclosed>.mini.carrymore{display:none}
+.oc-h{padding:8px 0;cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.oc-h .oc-meta{flex:1 1 auto;text-align:right;color:var(--dim2);font-size:12px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.oc-h .oc-chev{flex:0 0 auto;color:var(--dim2);font-size:11px;width:12px;text-align:center}
+/* 「当天安排」标题吸顶：滚到哪儿都知道自己在哪一段 */
+.sec[data-sec="open"]>.sec-h{position:sticky;top:var(--secTop,0px);z-index:6;
+  background:var(--bg);margin:0 -2px 8px;padding:9px 2px 7px}
 .row{display:flex;align-items:flex-start;gap:12px;background:var(--card);border:1px solid var(--line);
   border-radius:14px;padding:13px 12px 13px 16px;margin-bottom:9px;position:relative;overflow:hidden;
   transition:transform .12s,opacity .2s,box-shadow .15s;
@@ -864,7 +874,7 @@ var longSub='all', draftKind='other', draftSt='want', draftRating=0, noteOpen={}
 var KEY='ll_tasks_v1', tab='today', filter='today', editing=null, draftCat='study';
 var tasks=[], storeOk=true;
 var NATIVE=(typeof AndroidHost!=='undefined')?AndroidHost:null;
-var APP_VER='3.1.0';
+var APP_VER='3.1.1';
 var selDate=today(), rangeA=null, rangeB=null, draftColor='', draftEarly=0, draftSound='', ringNames={}, globalDefaultName='';
 var draftRepeat='', draftDow=[], draftDom=0, draftSubs=[], draftMode='alarm';
 var draftImgs=[], IMG_MAXN=9, IMG_MAX=10*1024*1024, IMG_BASE='';
@@ -1026,6 +1036,11 @@ try{
     else if(themeMq.addListener)themeMq.addListener(onThemeChange);
   }
 }catch(e){}
+/* 吸顶落点跟着 header 高度走：旋屏、字体缩放、导航栏变化都重算 */
+try{
+  window.addEventListener('resize',function(){syncSecTop()});
+  window.addEventListener('orientationchange',function(){setTimeout(syncSecTop,220)});
+}catch(e){}
 
 function dayLabel(ds){
   var t=today();
@@ -1162,6 +1177,7 @@ function renderHeader(){
        '</div>';
   }
   document.getElementById('hd').innerHTML=h;
+  syncSecTop();
 }
 
 var PIN={'red':'#ff4d4f','amber':'#f5a524','green':'#34d399'};
@@ -1281,6 +1297,18 @@ function pushRecentQ(q){
   try{localStorage.setItem('ll_recent_q',JSON.stringify(r.slice(0,5)))}catch(e){}
 }
 
+/* 顺延区展开状态：默认收起（今天的活先露脸），点标题展开，状态记本地 */
+var OVER_OPEN_KEY='ll_over_open';
+function overOpen(){try{return localStorage.getItem(OVER_OPEN_KEY)==='1'}catch(e){return false}}
+function setOverOpen(v){try{localStorage.setItem(OVER_OPEN_KEY,v?'1':'0')}catch(e){}}
+function mdShort(ds){var p=String(ds||'').split('-');return p.length===3?(+p[1])+'月'+(+p[2])+'日':''}
+/* 吸顶标题的落点：等于顶部 header 的实际高度 */
+function syncSecTop(){
+  var hd=document.getElementById('hd');
+  /* offsetHeight 是未缩放的布局高度，单手模式整页缩放时它才是 sticky 该用的数值 */
+  var top=hd?Math.round(hd.offsetHeight||0):0;
+  document.documentElement.style.setProperty('--secTop',top+'px');
+}
 function renderToday(){
   var t=today(), s=selDate;
   var planned=tasks.filter(function(x){return x.cat!=='long'&&x.dueDate===s});
@@ -1301,8 +1329,14 @@ function renderToday(){
   var carryShow=carry.slice(0,CARRY_MAX), carryMore=carry.length-carryShow.length;
   if(carry.length||over.length){
     var ototal=carry.length+over.length;
-    h+='<div class="sec" data-sec="over"><div class="sec-h"><b class="od">顺延</b><span class="cnt">'+ototal+'</span>'+
-       (over.length?'<button class="mini" data-act="clearover" style="margin-left:auto">转入今天</button>':'')+'</div>';
+    var oo=overOpen();
+    var ometa=carry.length?('最早 '+mdShort(carry[0].dueDate)):'昨夜顺延';
+    h+='<div class="sec'+(oo?'':' oclosed')+'" data-sec="over">'+
+       '<div class="sec-h oc-h" data-act="overtog">'+
+       '<b class="od">⟲ 顺延</b><span class="cnt">'+ototal+'</span>'+
+       '<span class="oc-meta">'+ometa+'</span>'+
+       (over.length?'<button class="mini" data-act="clearover">转入今天</button>':'')+
+       '<span class="oc-chev">'+(oo?'▴':'▾')+'</span></div>';
     h+=carryShow.map(function(x){return rowHtml(x,null,null,{carry:1})}).join('');
     if(carryMore)h+='<button class="mini carrymore" data-act="carryall">还有 '+carryMore+' 天未做 · 展开</button>';
     h+=over.map(function(x,i){return rowHtml(x,i,over.length)}).join('');
@@ -4216,6 +4250,7 @@ document.addEventListener('click',function(e){
   }
   if(el.dataset.act==='menu'){openDrawer();return}
   if(el.dataset.tpl!=null){addTpl(el.dataset.tpl);return}
+  if(el.dataset.act==='overtog'){setOverOpen(!overOpen());render();return}
   if(el.dataset.act==='carryall'){carryAll=true;render();return}
   if(el.dataset.act==='clearover'){
     tasks.forEach(function(x){if(x.cat!=='long'&&!x.done&&(x.deferred>0||(x.origDue&&x.origDue<today()))){x.deferred=0;x.origDue='';}});
