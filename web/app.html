@@ -137,6 +137,13 @@ html.selecting .fab{transform:translateY(140px);opacity:0;pointer-events:none}
   touch-action:none;z-index:5}
 .row.shift{transition:transform .15s}
 .row:active{transform:scale(.985)}
+.swdel{position:absolute;top:0;bottom:0;right:-72px;width:72px;border:0;padding:0;display:none;
+  border-radius:0 13px 13px 0;background:var(--danger);color:#fff;font-family:inherit;
+  font-size:13.5px;letter-spacing:1px;align-items:center;justify-content:center}
+/* 左滑＝整张卡片平移，红色按钮藏在行内右侧的框外；只有露出时才允许溢出，否则按钮被裁掉 */
+.row.rev{transform:translate3d(-72px,0,0);overflow:visible;z-index:2}
+.row.swiping{overflow:visible}
+.row.rev .swdel,.row.revdir .swdel{display:flex}
 .row.done{opacity:.45}
 .chk{flex:0 0 auto;width:26px;height:26px;border-radius:9px;border:2px solid var(--line2);
   background:transparent;margin-top:1px;display:flex;align-items:center;justify-content:center;
@@ -253,7 +260,7 @@ nav button[data-tab="long"]{--ac:var(--long)}
 #moreWrap{display:none;padding-top:2px}
 #moreWrap.on{display:block}
 #fQuick{margin-top:10px}
-.shmenu{display:none;position:absolute;top:56px;right:16px;z-index:6;min-width:132px;
+.shmenu{display:none;position:fixed;top:56px;right:16px;z-index:52;min-width:132px;
   background:var(--raise);border:1px solid var(--line2);border-radius:13px;
   padding:6px;box-shadow:0 16px 40px -14px #000}
 .shmenu.on{display:block}
@@ -797,6 +804,7 @@ dialog::backdrop{background:#000a}
 
 <div class="shmenu" id="sheetMenu">
   <button type="button" class="dan" id="bDel">删除这条</button>
+  <button type="button" class="dan" id="bDelSeries" style="display:none">删除整条重复</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -841,7 +849,7 @@ var longSub='all', draftKind='other', draftSt='want', draftRating=0, noteOpen={}
 var KEY='ll_tasks_v1', tab='today', filter='today', editing=null, draftCat='study';
 var tasks=[], storeOk=true;
 var NATIVE=(typeof AndroidHost!=='undefined')?AndroidHost:null;
-var APP_VER='3.0.1';
+var APP_VER='3.0.2';
 var selDate=today(), rangeA=null, rangeB=null, draftColor='', draftEarly=0, draftSound='', ringNames={}, globalDefaultName='';
 var draftRepeat='', draftDow=[], draftDom=0, draftSubs=[], draftMode='alarm';
 var draftImgs=[], IMG_MAXN=9, IMG_MAX=10*1024*1024, IMG_BASE='';
@@ -1192,7 +1200,8 @@ function rowHtml(t,rank,total,extra){
       (t.img&&t.img.id?'<img class="rowthumb" data-img="'+t.id+'" data-att="'+t.img.id+'|'+t.img.ext+'|1" src="'+imgUrl(t.img,true)+'" alt="">':'')+
       '</div><div class="meta">'+meta+'</div>'+subBlock+'</div>'+
     (t.done?'':'<span class="grip">⋮⋮</span>')+
-    '<button class="more" data-edit="'+t.id+'">⋯</button></div>';
+    '<button class="more" data-edit="'+t.id+'">⋯</button>'+
+    '<button class="swdel" data-swb="'+t.id+'">删除</button></div>';
 }
 
 function ordOf(t){return (t.order!=null?t.order:(t.createdAt||0))}
@@ -1486,6 +1495,14 @@ function repSkipMark(sid,ds){
   var m=repSkipMap(), a=m[sid]||[];
   if(a.indexOf(ds)<0)a.push(ds);
   m[sid]=a.slice(-5);
+  try{localStorage.setItem('ll_rep_skip',JSON.stringify(m))}catch(e){}
+}
+/* 撤销删除时擦掉墓碑，否则那天的实例以后永远不补种 */
+function repSkipUnmark(sid,ds){
+  var m=repSkipMap(), a=m[sid];
+  if(!a||a.indexOf(ds)<0)return;
+  a=a.filter(function(x){return x!==ds});
+  if(a.length)m[sid]=a; else delete m[sid];
   try{localStorage.setItem('ll_rep_skip',JSON.stringify(m))}catch(e){}
 }
 function migrateRepeat(){
@@ -1992,6 +2009,7 @@ function renderLong(){
 }
 
 function render(){
+  closeReveal();
   renderHeader();
   var v=document.getElementById('view');
   v.innerHTML = tab==='today'?renderToday() : (tab==='long'?renderLong():renderCat());
@@ -2140,6 +2158,8 @@ function openSheet(t){
   var pv=document.getElementById('qPreview');if(pv){pv.style.display='none';pv.textContent=''}
   document.getElementById('bDel').style.display=t?'block':'none';
   document.getElementById('bSheetMore').style.display=t?'':'none';
+  var bds=document.getElementById('bDelSeries');
+  if(bds)bds.style.display=(t&&t.repeat)?'block':'none';
   setMore(false);
   syncMoreSum();
   document.getElementById('mask').classList.add('on');
@@ -2384,10 +2404,16 @@ function orphanAdd(id){if(!id)return;var a=orphanList();if(a.indexOf(id)<0){a.pu
 function orphanDel(id){if(!id)return;orphanSave(orphanList().filter(function(x){return x!==id}))}
 function flushOrphans(){
   if(!NATIVE||!NATIVE.deleteImage)return;
-  var a=orphanList();
-  if(!a.length)return;
-  a.forEach(function(id){try{NATIVE.deleteImage(id)}catch(e){}});
-  orphanSave([]);
+  if(!orphanList().length)return;
+  /* 分组处理：删完一组就出队，中途被杀也只丢当前这一组，不会整批陪葬 */
+  for(var guard=0;guard<40;guard++){
+    var batch=orphanList().slice(0,50);
+    if(!batch.length)return;
+    batch.forEach(function(id){try{NATIVE.deleteImage(id)}catch(e){}});
+    var gone={};
+    batch.forEach(function(id){gone[id]=1});
+    orphanSave(orphanList().filter(function(x){return !gone[x]}));
+  }
 }
 function imgFilesForBackup(){
   var out=[];
@@ -3663,41 +3689,68 @@ function scrollByY(dy){
   var sc=scroller();
   if(sc===window)window.scrollBy(0,dy); else sc.scrollTop+=dy;
 }
-var swipe=null, swipeRaf=0;
+var swipe=null, swipeRaf=0, reveal=null, REVW=72;
 /* 每帧只写一次 transform：中间连续 move 不触发重排，定住也不抖 */
 function paintSwipe(){
   swipeRaf=0;
   var sw=swipe;
   if(!sw||!sw.moved)return;
-  var pull=Math.min(sw.dx,120);
-  sw.row.style.transform='translate3d('+pull+'px,0,0)';
-  sw.row.style.opacity=String(Math.max(.5,1-sw.dx/520));
+  if(sw.dir>0){
+    var pull=Math.min(sw.dx,120);
+    sw.row.style.transform='translate3d('+pull+'px,0,0)';
+    sw.row.style.opacity=String(Math.max(.5,1-sw.dx/520));
+    return;
+  }
+  var p=Math.max(-REVW-18,Math.min(0,sw.dx));
+  if(p<-REVW)p=-REVW+(p+REVW)*.3;        /* 拉过头有阻尼，别把行拽飞 */
+  sw.row.style.transform='translate3d('+Math.round(p*10)/10+'px,0,0)';
+}
+/* 左滑露出红色「删除」：按钮本来就在行内 right:-72，行左移 72 正好填满空挡 */
+function closeReveal(){
+  if(!reveal)return;
+  if(reveal.el)reveal.el.classList.remove('rev');
+  reveal=null;
+}
+function openReveal(el,t){
+  if(reveal&&reveal.el===el)return;
+  closeReveal();
+  reveal={el:el,id:t.id,task:t};
+  el.classList.add('rev');
+  try{navigator.vibrate&&navigator.vibrate(10)}catch(err){}
 }
 document.addEventListener('touchstart',function(e){
   if(e.touches.length!==1)return;
   var el=e.target.closest?e.target.closest('.row'):null;
+  /* 按住别处就先收起露出态；按在红色按钮上不算「别处」 */
+  if(reveal&&(!el||reveal.el!==el)){ if(!(e.target.closest&&e.target.closest('[data-swb]')))closeReveal(); }
   if(!el||e.target.closest('button')||e.target.closest('.subrow'))return;
   var x=e.touches[0].clientX, y=e.touches[0].clientY;
   var task=tasks.filter(function(v){return v.id===el.dataset.id})[0];
-  swipe={row:el,task:task,x0:x,y0:y,dx:0,moved:false,
-         can:!!(task&&task.cat!=='long'&&!task.done&&task.dueDate)};
+  swipe={row:el,task:task,x0:x,y0:y,dx:0,moved:false,dir:0,
+         can:!!(task&&task.cat!=='long'&&!task.done&&task.dueDate),
+         canL:!!(task&&el.closest('#view')&&!el.closest('.sres'))};
   if(el.classList.contains('done')||siblingRows(el.parentNode).length<2)return;
   drag={row:el,y0:y,lastY:y,active:false,timer:null,scrollY:scroller().scrollTop};
   drag.timer=setTimeout(dragActivate,HOLD);
 },{passive:true});
 document.addEventListener('touchmove',function(e){
   var x=e.touches[0].clientX, y=e.touches[0].clientY;
-  if(swipe&&!swipe.moved&&swipe.can){
+  if(swipe&&!swipe.moved){
     var dx=x-swipe.x0, dy=y-swipe.y0;
-    if(dx>14&&Math.abs(dx)>Math.abs(dy)*1.2){
-      swipe.moved=true;
-      if(drag){clearTimeout(drag.timer);drag=null}
-      swipe.row.classList.add('swiping');
-      try{navigator.vibrate&&navigator.vibrate(8)}catch(err){}
+    if(Math.abs(dx)>14&&Math.abs(dx)>Math.abs(dy)*1.2){
+      var want=dx>0?1:-1;
+      if((want>0&&swipe.can)||(want<0&&swipe.canL)){
+        swipe.moved=true;
+        swipe.dir=want;
+        if(drag){clearTimeout(drag.timer);drag=null}
+        swipe.row.classList.add('swiping');
+        if(want<0)swipe.row.classList.add('revdir');
+        try{navigator.vibrate&&navigator.vibrate(8)}catch(err){}
+      }
     }
   }
   if(swipe&&swipe.moved){
-    swipe.dx=Math.max(0,x-swipe.x0);
+    swipe.dx=x-swipe.x0;
     if(!swipeRaf)swipeRaf=requestAnimationFrame(paintSwipe);
     e.preventDefault();
     return;
@@ -3719,10 +3772,16 @@ function swipeEnd(){
   if(!sw||!sw.moved)return;
   var row=sw.row, t=sw.task;
   row.classList.remove('swiping');
+  row.classList.remove('revdir');
   row.style.transform='';
   row.style.opacity='';
   justDragged=Date.now();             /* 别让松手后的 click 又打开面板 */
-  if(sw.dx<72||!t)return;
+  if(!t)return;
+  if(sw.dir<0){                       /* 左滑：露出删除按钮 */
+    if(sw.dx<=-40)openReveal(row,t); else closeReveal();
+    return;
+  }
+  if(sw.dx<72)return;
   var od=t.dueDate, orr=t.remindDate, oetime=t.remindTime;
   var nd=addDays(t.dueDate,1);
   t.dueDate=nd;
@@ -3736,6 +3795,7 @@ function swipeEnd(){
 function gestureEnd(){swipeEnd();dragEnd()}
 document.addEventListener('touchend',gestureEnd);
 document.addEventListener('touchcancel',gestureEnd);
+document.addEventListener('scroll',function(){closeReveal()},true);
 
 
 /* ---------- 批量选择 ---------- */
@@ -3835,10 +3895,19 @@ function selAction(k){
   if(k==='del'){
     var removed=picked.map(function(t){return {t:t,i:tasks.indexOf(t)}});
     removed.sort(function(a,b){return b.i-a.i}).forEach(function(r){tasks.splice(r.i,1)});
-    save();exitSelect();
+    /* 和单条删除对齐：重复任务打墓碑（否则明天又种回来）、图片进待回收（否则文件永久残留） */
+    removed.forEach(function(r){
+      if(r.t.repeat&&r.t.dueDate)repSkipMark(seriesOf(r.t),r.t.dueDate);
+      imgsOf(r.t).forEach(function(x){orphanAdd(x.id)});
+    });
+    save();exitSelect();schedulePrecise();
     toastAction('已删除 '+removed.length+' 条','撤销',function(){
-      removed.slice().sort(function(a,b){return a.i-b.i}).forEach(function(r){tasks.splice(r.i,0,r.t)});
-      save();render();
+      removed.slice().sort(function(a,b){return a.i-b.i}).forEach(function(r){
+        tasks.splice(r.i,0,r.t);
+        if(r.t.repeat&&r.t.dueDate)repSkipUnmark(seriesOf(r.t),r.t.dueDate);
+        imgsOf(r.t).forEach(function(x){orphanDel(x.id)});
+      });
+      save();render();schedulePrecise();
     },5000);
     return;
   }
@@ -3915,6 +3984,19 @@ function toastAction(msg,label,cb,ms){
 
 /* ---------- 事件 ---------- */
 document.addEventListener('click',function(e){
+  /* 红色删除按钮：放在 350ms 防误触判断之前，划完立刻点也删得掉 */
+  var swb=e.target.closest?e.target.closest('[data-swb]'):null;
+  if(swb){
+    var st=tasks.filter(function(x){return x.id===swb.dataset.swb})[0];
+    closeReveal();
+    if(st)deleteTask(st);
+    return;
+  }
+  if(reveal){                                /* 露出态下点别处＝只收起，顺手吞掉划完那一下的合成点击 */
+    var ghost=Date.now()-justDragged<350&&e.target.closest&&e.target.closest('.row')===reveal.el;
+    if(!ghost)closeReveal();
+    return;
+  }
   if(Date.now()-justDragged<350)return;      /* 刚拖动过，别把松手当成点击 */
   var el=e.target.closest('[data-tpl],[data-chk],[data-subchk],[data-subtoggle],[data-edit],[data-tab],[data-filter],[data-act],[data-cat],[data-date],[data-color],[data-early],[data-mode],[data-theme],[data-sb],[data-yr],[data-wrapup],[data-kind],[data-st],[data-lsub],[data-note-t]');
   /* 列表里的缩略图：点一下直接全屏 */
@@ -4196,6 +4278,7 @@ function deleteTask(t){
   save();closeSheet();render();schedulePrecise();
   toastAction('已删除「'+(removed.title.length>12?removed.title.slice(0,12)+'…':removed.title)+'」','撤销',function(){
     tasks.splice(Math.min(idx,tasks.length),0,removed);
+    if(removed.repeat&&removed.dueDate)repSkipUnmark(seriesOf(removed),removed.dueDate);
     imgsOf(removed).forEach(function(x){orphanDel(x.id)});
     save();render();schedulePrecise();
     toast('已恢复');
@@ -4207,13 +4290,49 @@ document.getElementById('bDel').addEventListener('click',function(){
   if(!editing)return;
   deleteTask(editing);
 });
+/* 删除整条重复：同系列全部实例一起删，并清掉「跳过的那几天」记录 */
+function deleteSeries(t){
+  var sid=seriesOf(t), gone=[];
+  tasks.forEach(function(x,i){if(seriesOf(x)===sid)gone.push({t:x,i:i})});
+  if(!gone.length)return;
+  var title=gone[0].t.title||'';
+  var nm=title.length>12?title.slice(0,12)+'…':title;
+  if(!confirm('删除「'+nm+'」整条重复？\n这一系列共 '+gone.length+' 条会一起删掉，以后也不再自动生成。'))return;
+  gone.sort(function(a,b){return a.i-b.i});
+  for(var i=gone.length-1;i>=0;i--)tasks.splice(gone[i].i,1);
+  gone.forEach(function(g){imgsOf(g.t).forEach(function(x){orphanAdd(x.id)})});
+  var m=repSkipMap(), oldSkip=m[sid];
+  if(oldSkip){delete m[sid];try{localStorage.setItem('ll_rep_skip',JSON.stringify(m))}catch(e){}}
+  save();closeSheet();render();schedulePrecise();
+  toastAction('已删除整条重复 · '+gone.length+' 条','撤销',function(){
+    gone.forEach(function(g){
+      tasks.splice(Math.min(g.i,tasks.length),0,g.t);
+      imgsOf(g.t).forEach(function(x){orphanDel(x.id)});
+    });
+    if(oldSkip){var mm=repSkipMap();mm[sid]=oldSkip;try{localStorage.setItem('ll_rep_skip',JSON.stringify(mm))}catch(e){}}
+    save();render();schedulePrecise();
+    toast('已恢复');
+  },6000);
+}
+document.getElementById('bDelSeries').addEventListener('click',function(){
+  var m=document.getElementById('sheetMenu');
+  if(m)m.classList.remove('on');
+  if(!editing||!editing.repeat)return;
+  deleteSeries(editing);
+});
 /* 顶部栏 / 更多 / ⋯ 菜单 */
 document.getElementById('bCancel').addEventListener('click',closeSheet);
 document.getElementById('bMore').addEventListener('click',function(){setMore(!moreOpen)});
 document.getElementById('bSheetMore').addEventListener('click',function(e){
   e.stopPropagation();
   var m=document.getElementById('sheetMenu');
-  if(m)m.classList.toggle('on');
+  if(!m)return;
+  if(m.classList.contains('on')){m.classList.remove('on');return}
+  /* 面板是 fixed 的滚动容器，菜单必须跟着 ⋯ 按钮走，不能靠 top:56 猜 */
+  var r=this.getBoundingClientRect();
+  m.style.top=Math.round(r.bottom+6)+'px';
+  m.style.right=Math.max(8,Math.round(window.innerWidth-r.right))+'px';
+  m.classList.add('on');
 });
 document.addEventListener('click',function(e){
   var m=document.getElementById('sheetMenu');
@@ -4278,7 +4397,7 @@ drainNative();
 setInterval(checkReminders,20000);
 setInterval(dayTick,30000);
 document.addEventListener('visibilitychange',function(){
-  if(!document.hidden){rollover(true);render();checkReminders();schedulePrecise();drainNative()}
+  if(!document.hidden){rollover(true);ensureRepeats();render();checkReminders();schedulePrecise();drainNative()}
 });
 })();
 </script>
